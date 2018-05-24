@@ -1,22 +1,19 @@
-include("../src/board.jl")
-include("../src/utils.jl")
 include("test_utils.jl")
+using go: parse_kgs_coords, parse_sgf_coords, Position, PlayerMove
 using Base.Test: @test, @test_throws
-set_board_size(9)
+go.set_board_size(9)
 
-EMPTY_ROW = repeat(".", N) * '\n'
+EMPTY_ROW = repeat(".", go.N) * '\n'
 TEST_BOARD = load_board("""
                         .X.....OO
                         X........
                         """ * repeat(EMPTY_ROW, 7))
 
-function pc_set(string)
-  return Set(map(parse_kgs_coords, split(string)))
-end
+pc_set(string) = Set(map(parse_kgs_coords, split(string)))
 
 function test_load_board()
-  @test assertEqualArray(EMPTY_BOARD, zeros(N, N))
-  @test assertEqualArray(EMPTY_BOARD, load_board(repeat(". \n", N ^ 2)))
+  @test assertEqualArray(go.go.EMPTY_BOARD, zeros(go.N, go.N))
+  @test assertEqualArray(go.go.EMPTY_BOARD, load_board(repeat(". \n", go.N ^ 2)))
 end
 
 function test_parsing()
@@ -29,19 +26,19 @@ end
 
 function test_neighbors()
   corner = parse_kgs_coords("A1")
-  neighbors = [EMPTY_BOARD[c...] for c in NEIGHBORS[corner...]]
+  neighbors = [go.EMPTY_BOARD[c...] for c in go.NEIGHBORS[corner...]]
   @test length(neighbors) == 2
 
   side = parse_kgs_coords("A2")
-  side_neighbors = [EMPTY_BOARD[c...] for c in NEIGHBORS[side...]]
+  side_neighbors = [go.EMPTY_BOARD[c...] for c in go.NEIGHBORS[side...]]
   @test length(side_neighbors) == 3
 end
 
 function test_is_koish()
-  @test is_koish(TEST_BOARD, parse_kgs_coords("A9")) == BLACK
-  @test is_koish(TEST_BOARD, parse_kgs_coords("B8")) == nothing
-  @test is_koish(TEST_BOARD, parse_kgs_coords("B9")) == nothing
-  @test is_koish(TEST_BOARD, parse_kgs_coords("E5")) == nothing
+  @test go.is_koish(TEST_BOARD, parse_kgs_coords("A9")) == BLACK
+  @test go.is_koish(TEST_BOARD, parse_kgs_coords("B8")) == nothing
+  @test go.is_koish(TEST_BOARD, parse_kgs_coords("B9")) == nothing
+  @test go.is_koish(TEST_BOARD, parse_kgs_coords("E5")) == nothing
 end
 
 function test_is_eyeish()
@@ -60,22 +57,22 @@ function test_is_eyeish()
   W_eyes = pc_set("H2 J1 J3")
   not_eyes = pc_set("B3 E5")
   for be in B_eyes
-    is_eyeish(board, be) == BLACK ? nothing : throw(AssertionError(string(be)))
+    go.is_eyeish(board, be) == BLACK ? nothing : throw(AssertionError(string(be)))
   end
   for we in W_eyes
-    is_eyeish(board, we) == WHITE ? nothing : throw(AssertionError(string(we)))
+    go.is_eyeish(board, we) == WHITE ? nothing : throw(AssertionError(string(we)))
   end
   for ne in not_eyes
-    is_eyeish(board, ne) == nothing ? nothing : throw(AssertionError(string(ne)))
+    go.is_eyeish(board, ne) == nothing ? nothing : throw(AssertionError(string(ne)))
   end
 end
 
 function test_lib_tracker_init()
   board = load_board("X........" * repeat(EMPTY_ROW, 8))
 
-  lib_tracker = from_board(board)
+  lib_tracker = go.from_board(board)
   @test length(lib_tracker.groups) == 1
-  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != go.MISSING_GROUP_ID
   @test lib_tracker.liberty_cache[parse_kgs_coords("A9")...] == 2
   sole_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("A9")...]]
   @test sole_group.stones == pc_set("A9")
@@ -85,10 +82,10 @@ end
 
 function test_place_stone()
   board = load_board("X........" * repeat(EMPTY_ROW, 8))
-  lib_tracker = from_board(board)
-  add_stone!(lib_tracker, BLACK, parse_kgs_coords("B9"))
+  lib_tracker = go.from_board(board)
+  go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("B9"))
   @test length(lib_tracker.groups) == 1
-  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != go.MISSING_GROUP_ID
   @test lib_tracker.liberty_cache[parse_kgs_coords("A9")...] == 3
   @test lib_tracker.liberty_cache[parse_kgs_coords("B9")...] == 3
   sole_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("A9")...]]
@@ -99,11 +96,11 @@ end
 
 function test_place_stone_opposite_color()
   board = load_board("X........" * repeat(EMPTY_ROW, 8))
-  lib_tracker = from_board(board)
-  add_stone!(lib_tracker, WHITE, parse_kgs_coords("B9"))
+  lib_tracker = go.from_board(board)
+  go.add_stone!(lib_tracker, WHITE, parse_kgs_coords("B9"))
   @test length(lib_tracker.groups) == 2
-  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != MISSING_GROUP_ID
-  @test lib_tracker.group_index[parse_kgs_coords("B9")...] != MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("A9")...] != go.MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("B9")...] != go.MISSING_GROUP_ID
   @test lib_tracker.liberty_cache[parse_kgs_coords("A9")...] == 1
   @test lib_tracker.liberty_cache[parse_kgs_coords("B9")...] == 2
   black_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("A9")...]]
@@ -122,10 +119,10 @@ function test_merge_multiple_groups()
       X.X......
       .X.......
   """ * repeat(EMPTY_ROW, 6))
-  lib_tracker = from_board(board)
-  add_stone!(lib_tracker, BLACK, parse_kgs_coords("B8"))
+  lib_tracker = go.from_board(board)
+  go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("B8"))
   @test length(lib_tracker.groups) == 1
-  @test lib_tracker.group_index[parse_kgs_coords("B8")...] != MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("B8")...] != go.MISSING_GROUP_ID
   sole_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("B8")...]]
   @test sole_group.stones == pc_set("B9 A8 B8 C8 B7")
   @test sole_group.liberties == pc_set("A9 C9 D8 A7 C7 B6")
@@ -143,10 +140,10 @@ function test_capture_stone()
       XO.......
       .X.......
   """ * repeat(EMPTY_ROW, 6))
-  lib_tracker = from_board(board)
-  captured = add_stone!(lib_tracker, BLACK, parse_kgs_coords("C8"))
+  lib_tracker = go.from_board(board)
+  captured = go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("C8"))
   @test length(lib_tracker.groups) == 4
-  @test lib_tracker.group_index[parse_kgs_coords("B8")...] == MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("B8")...] == go.MISSING_GROUP_ID
   @test captured == pc_set("B8")
 end
 
@@ -156,10 +153,10 @@ function test_capture_many()
       XOO......
       .XX......
   """ * repeat(EMPTY_ROW, 6))
-  lib_tracker = from_board(board)
-  captured = add_stone!(lib_tracker, BLACK, parse_kgs_coords("D8"))
+  lib_tracker = go.from_board(board)
+  captured = go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("D8"))
   @test length(lib_tracker.groups) == 4
-  @test lib_tracker.group_index[parse_kgs_coords("B8")...] == MISSING_GROUP_ID
+  @test lib_tracker.group_index[parse_kgs_coords("B8")...] == go.MISSING_GROUP_ID
   @test captured == pc_set("B8 C8")
 
   left_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("A8")...]]
@@ -202,8 +199,8 @@ function test_capture_multiple_groups()
       OXX......
       XX.......
   """ * repeat(EMPTY_ROW, 6))
-  lib_tracker = from_board(board)
-  captured = add_stone!(lib_tracker, BLACK, parse_kgs_coords("A9"))
+  lib_tracker = go.from_board(board)
+  captured = go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("A9"))
   @test length(lib_tracker.groups) == 2
   @test captured == pc_set("B9 A8")
 
@@ -230,8 +227,8 @@ function test_same_friendly_group_neighboring_twice()
       X........
   """ * repeat(EMPTY_ROW, 7))
 
-  lib_tracker = from_board(board)
-  captured = add_stone!(lib_tracker, BLACK, parse_kgs_coords("B8"))
+  lib_tracker = go.from_board(board)
+  captured = go.add_stone!(lib_tracker, BLACK, parse_kgs_coords("B8"))
   @test length(lib_tracker.groups) == 1
   sole_group_id = lib_tracker.group_index[parse_kgs_coords("A9")...]
   sole_group = lib_tracker.groups[sole_group_id]
@@ -246,8 +243,8 @@ function test_same_opponent_group_neighboring_twice()
       X........
   """ * repeat(EMPTY_ROW, 7))
 
-  lib_tracker = from_board(board)
-  captured = add_stone!(lib_tracker, WHITE, parse_kgs_coords("B8"))
+  lib_tracker = go.from_board(board)
+  captured = go.add_stone!(lib_tracker, WHITE, parse_kgs_coords("B8"))
   @test length(lib_tracker.groups) == 2
   black_group = lib_tracker.groups[lib_tracker.group_index[parse_kgs_coords("A9")...]]
   @test black_group.stones == pc_set("A9 B9 A8")
@@ -279,7 +276,7 @@ function test_passing()
       recent = [PlayerMove(BLACK, nothing)],
       to_play = WHITE
   )
-  pass_position = pass_move!(start_position)
+  pass_position = go.go.pass_move!(start_position)
   assertEqualPositions(pass_position, expected_position)
 end
 
@@ -302,7 +299,7 @@ function test_flipturn()
       recent = Vector{PlayerMove}(),
       to_play = WHITE
   )
-  flip_position = flip_playerturn!(start_position)
+  flip_position = go.flip_playerturn!(start_position)
   assertEqualPositions(flip_position, expected_position)
 end
 
@@ -326,11 +323,11 @@ function test_is_move_suicidal()
   nonsuicidal_moves = pc_set("B5 J1 A9")
   for move in suicidal_moves
     @test position.board[move...] == EMPTY #sanity check my coordinate input
-    is_move_suicidal(position, move) ? nothing : throw(AssertionError(string(move)))
+    go.is_move_suicidal(position, move) ? nothing : throw(AssertionError(string(move)))
   end
   for move in nonsuicidal_moves
     @test position.board[move...] == EMPTY # sanity check my coordinate input
-    !is_move_suicidal(position, move) ? nothing : throw(AssertionError(string(move)))
+    !go.is_move_suicidal(position, move) ? nothing : throw(AssertionError(string(move)))
   end
 end
 
@@ -359,25 +356,25 @@ function test_legal_moves()
   B_legal_moves = pc_set("A9 C8 J6")
   for move ∈ empty_spots
     if move ∉ B_legal_moves
-      @test_throws IllegalMove play_move!(position, move)
+      @test_throws go.IllegalMove go.play_move!(position, move)
     else
-      play_move!(position, move)
+      go.play_move!(position, move)
     end
   end
   # pass should also be legal
-  play_move!(position, nothing)
+  go.play_move!(position, nothing)
 
-  pass_position = pass_move!(position)
+  pass_position = go.pass_move!(position)
   W_legal_moves = pc_set("C8 J8 J6 J1")
   for move ∈ empty_spots
     if move ∉ W_legal_moves
-      @test_throws IllegalMove play_move!(pass_position, move)
+      @test_throws go.IllegalMove go.play_move!(pass_position, move)
     else
-      play_move!(pass_position, move)
+      go.play_move!(pass_position, move)
     end
   end
   # pass should also be legal
-  play_move!(pass_position, nothing)
+  go.play_move!(pass_position, nothing)
 end
 
 function test_move()
@@ -403,7 +400,7 @@ function test_move()
       recent=[PlayerMove(BLACK, parse_kgs_coords("C9"))],
       to_play = WHITE
   )
-  actual_position = play_move!(start_position, parse_kgs_coords("C9"))
+  actual_position = go.play_move!(start_position, parse_kgs_coords("C9"))
   assertEqualPositions(actual_position, expected_position)
 
   expected_board2 = load_board("""
@@ -419,7 +416,7 @@ function test_move()
       recent = [PlayerMove(BLACK, parse_kgs_coords("C9")), PlayerMove(WHITE, parse_kgs_coords("J8"))],
       to_play = BLACK
   )
-  actual_position2 = play_move!(actual_position, parse_kgs_coords("J8"))
+  actual_position2 = go.play_move!(actual_position, parse_kgs_coords("J8"))
   assertEqualPositions(actual_position2, expected_position2)
 end
 
@@ -454,7 +451,7 @@ function test_move_with_capture()
       recent = Vector{PlayerMove}([PlayerMove(BLACK, parse_kgs_coords("B2"))]),
       to_play = WHITE
   )
-  actual_position = play_move!(start_position, parse_kgs_coords("B2"))
+  actual_position = go.play_move!(start_position, parse_kgs_coords("B2"))
   assertEqualPositions(actual_position, expected_position)
 end
 
@@ -485,14 +482,14 @@ function test_ko_move()
       recent = Vector{PlayerMove}([PlayerMove(BLACK, parse_kgs_coords("A9"))]),
       to_play = WHITE
   )
-  actual_position = play_move!(start_position, parse_kgs_coords("A9"))
+  actual_position = go.play_move!(start_position, parse_kgs_coords("A9"))
 
   assertEqualPositions(actual_position, expected_position)
 
   # Check that retaking ko is illegal until two intervening moves
-  @test_throws IllegalMove play_move!(actual_position, parse_kgs_coords("B9"))
-  pass_twice = pass_move!(pass_move!(actual_position))
-  ko_delayed_retake = play_move!(pass_twice, parse_kgs_coords("B9"))
+  @test_throws go.IllegalMove go.play_move!(actual_position, parse_kgs_coords("B9"))
+  pass_twice = go.pass_move!(go.pass_move!(actual_position))
+  ko_delayed_retake = go.play_move!(pass_twice, parse_kgs_coords("B9"))
   expected_position = Position(
       board = start_board,
       n = 4,
@@ -531,7 +528,7 @@ function test_scoring()
       to_play = BLACK
   )
   expected_score = 1.5
-  @test score(position) == expected_score
+  @test go.score(position) == expected_score
 
   board = load_board("""
       XXX......
@@ -554,5 +551,5 @@ function test_scoring()
       to_play = WHITE
   )
   expected_score = 2.5
-  @test score(position) == expected_score
+  @test go.score(position) == expected_score
 end

@@ -1,19 +1,20 @@
-include("../src/board.jl")
-set_board_size(9)
+include("../src/go.jl")
+using go: WHITE, BLACK, EMPTY
+
+go.set_board_size(9)
 
 function load_board(str)
-  global N
   reverse_map = Dict{Char, Int}([
       'X' => BLACK,
       'O' => WHITE,
       '.' => EMPTY,
-      '#' => FILL,
-      '*' => KO,
-      '?' => UNKNOWN
+      '#' => go.FILL,
+      '*' => go.KO,
+      '?' => go.UNKNOWN
   ])
   str = replace(str, r"[^XO\.#]+", "")
-  @assert length(str) == N ^ 2 # "Board to load didn't have right dimensions"
-  board = zeros(Int8, N, N)
+  @assert length(str) == go.N ^ 2 # "Board to load didn't have right dimensions"
+  board = zeros(Int8, go.N, go.N)
   for (i, char) in enumerate(str)
       board[i] = reverse_map[char]
   end
@@ -36,7 +37,7 @@ function assertEqualLibTracker(lib_tracker1, lib_tracker2)
     current_gid = 0
     mapping = Dict{Int16, Int}()
     for group_id in lib_tracker.group_index
-      if group_id == MISSING_GROUP_ID
+      if group_id == go.MISSING_GROUP_ID
         continue
       end
       if group_id ∉ keys(mapping)
@@ -50,9 +51,9 @@ function assertEqualLibTracker(lib_tracker1, lib_tracker2)
   lt1_mapping = find_group_mapping(lib_tracker1)
   lt2_mapping = find_group_mapping(lib_tracker2)
 
-  remapped_group_index1 = [get(lt1_mapping, gid, MISSING_GROUP_ID)
+  remapped_group_index1 = [get(lt1_mapping, gid, go.MISSING_GROUP_ID)
                             for gid in lib_tracker1.group_index]
-  remapped_group_index2 = [get(lt2_mapping, gid, MISSING_GROUP_ID)
+  remapped_group_index2 = [get(lt2_mapping, gid, go.MISSING_GROUP_ID)
                             for gid in lib_tracker2.group_index]
   @assert remapped_group_index1 == remapped_group_index2
 

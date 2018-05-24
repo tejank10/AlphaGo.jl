@@ -1,13 +1,11 @@
-include("board.jl")
-
 KGS_COLUMNS = "ABCDEFGHJKLMNOPQRST"
 SGF_COLUMNS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-parse_sgf_to_flat(sgf) = flatten_coords(parse_sgf_coords(sgf))
+#parse_sgf_to_flat(sgf) = flatten_coords(parse_sgf_coords(sgf))
 
-flatten_coords(c) = N * (c[2] - 1) + c[1]
+#flatten_coords(c) = N * (c[2] - 1) + c[1]
 
-unflatten_coords(f) = tuple([i + 1 for i in reverse(divrem(f - 1, N))...])
+#unflatten_coords(f) = tuple([i + 1 for i in reverse(divrem(f - 1, N))...])
 
 function parse_sgf_coords(s)
   # Interprets coords. aa is top left corner; sa is top right corner
