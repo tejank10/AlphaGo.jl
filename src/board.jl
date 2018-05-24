@@ -27,7 +27,7 @@ DIAGONALS = Dict{NTuple{2, Int}, Array{NTuple{2, Int}, 1}}()
 function set_board_size(n::Int = 19)
   global N, ALL_COORDS, EMPTY_BOARD, NEIGHBORS, DIAGONALS
   n ∈ (9, 13, 17, 19) || error("Illegal board size $n")
-
+  N = n
   ALL_COORDS = [(i, j) for i = 1:n for j = 1:n]
   EMPTY_BOARD = zeros(Int8, n, n)
 
@@ -68,10 +68,9 @@ end
 function is_koish(board, c)
   # Check if c is surrounded on all sides by 1 color, and return that color
   if board[c...] != EMPTY return nothing end
-
-  neighs = [board[n...] for n in NEIGHBORS[c...]]
+  neighs = Set(board[n...] for n in NEIGHBORS[c...])
   if length(neighs) == 1 && EMPTY ∉ neighs
-    return neighs[1]
+    return collect(neighs)[1]
   else
     return nothing
   end
@@ -118,7 +117,7 @@ mutable struct LibertyTracker
   group_index::Array{Int16, 2}
   groups::Dict{Int, Group}
   liberty_cache::Array{UInt8, 2}
-  max_group_id::Int
+  max_group_id::Int16
 
   function LibertyTracker(group_index = nothing, groups = nothing,
     liberty_cache = nothing, max_group_id = 1)
@@ -128,7 +127,7 @@ mutable struct LibertyTracker
     grp_idx = group_index != nothing ? group_index : -ones(Int16, N, N)
     grps = groups != nothing ? groups : Dict{Int, Group}()
     lib_cache = liberty_cache != nothing ? liberty_cache : zeros(UInt8, N, N)
-    new(N, grp_idx, grps, lib_cache, max_group_id)
+    new(grp_idx, grps, lib_cache, max_group_id)
   end
 end
 
@@ -139,7 +138,7 @@ function deepcopy(lib_trac::LibertyTracker)
       group.id => Group(group.id, Set(group.stones), Set(group.liberties), group.color)
       for group in values(lib_trac.groups)
   )
-  return LibertyTracker(new_group_index, new_groups, liberty_cache=new_lib_cache, max_group_id=self.max_group_id)
+  return LibertyTracker(new_group_index, new_groups, new_lib_cache, lib_trac.max_group_id)
 end
 
 function from_board(board)
@@ -186,7 +185,7 @@ function _create_group!(lib_trac::LibertyTracker, color, c::NTuple{2, Int},
   return new_group
 end
 
-function _update_liberties!(lib_trac::LibertyTracker, group_id::Int; add = nothing, remove = nothing)
+function _update_liberties!(lib_trac::LibertyTracker, group_id::Integer; add = nothing, remove = nothing)
   group = lib_trac.groups[group_id]
   if add != nothing
     union!(group.liberties, add)
@@ -210,12 +209,12 @@ function _merge_groups!(lib_trac::LibertyTracker, group1_id::Int, group2_id::Int
     lib_trac.group_index[s...] = group1_id
   end
 
-  _update_liberties!(lib_trac, group1_id, group2.liberties, union(group2.stones, group1.stones))
+  _update_liberties!(lib_trac, group1_id; add = group2.liberties, remove = union(group2.stones, group1.stones))
 
   return group1
 end
 
-function _capture_group!(lib_trac::LibertyTracker, group_id::Int)
+function _capture_group!(lib_trac::LibertyTracker, group_id::Integer)
   dead_group = lib_trac.groups[group_id]
   delete!(lib_trac.groups, group_id)
   for s in dead_group.stones
@@ -242,9 +241,9 @@ function add_stone!(lib_trac::LibertyTracker, color, c)
   captured_stones = Set()
   opponent_neighboring_group_ids = Set{Int}()
   friendly_neighboring_group_ids = Set{Int}()
-  empty_neighbors = Set()
+  empty_neighbors = Set{NTuple{2, Int}}()
 
-  for n in b.neighbours[c...]
+  for n in NEIGHBORS[c...]
     neighbor_group_id = lib_trac.group_index[n...]
     if neighbor_group_id != MISSING_GROUP_ID
       neighbor_group = lib_trac.groups[neighbor_group_id...]
@@ -266,7 +265,7 @@ function add_stone!(lib_trac::LibertyTracker, color, c)
   for group_id in opponent_neighboring_group_ids
     neighbor_group = lib_trac.groups[group_id]
     if length(neighbor_group.liberties) == 1
-      captured = _capture_group(lib_trac, group_id)
+      captured = _capture_group!(lib_trac, group_id)
       union!(captured_stones, captured)
     else
       _update_liberties!(lib_trac, group_id; remove = Set([c]))
@@ -298,12 +297,12 @@ mutable struct Position
   n::Int
   komi::Float64
   caps::NTuple{2, Int}
-  lib_trac::LibertyTracker
-  ko::PlayerMove
+  lib_tracker::LibertyTracker
+  ko::Any
   recent::Vector{PlayerMove}
   to_play::Int
 
-  function Position(board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
+  function Position(;board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
     ko = nothing, recent = Vector{PlayerMove}(), to_play = BLACK)
     b = board != nothing ? board : deepcopy(EMPTY_BOARD)
     lib_trac = lib_tracker != nothing ? lib_tracker : from_board(board)
@@ -314,8 +313,8 @@ end
 function deepcopy(pos::Position)
   new_board = deepcopy(pos.board)
   new_lib_tracker = deepcopy(pos.lib_tracker)
-  return Position(new_board, pos.n, pos.komi, pos.caps, new_lib_tracker,
-                  pos.ko, pos.recent, pos.to_play)
+  return Position(;board = new_board, n = pos.n, komi = pos.komi, caps = pos.caps,
+  lib_tracker = new_lib_tracker, ko = pos.ko, recent = pos.recent, to_play = pos.to_play)
 end
 
 function show(io::IO, pos::Position)
@@ -336,7 +335,7 @@ function show(io::IO, pos::Position)
   for i = 1:N
     row = []
     for j = 1:N
-      appended = (length(pos.recent) != 0 && (i, j) == self.recent[end].move) ? '<' : ' '
+      appended = (length(pos.recent) != 0 && (i, j) == pos.recent[end].move) ? '<' : ' '
       push!(row, pretty_print_map[board[i,j]] * appended)
     end
     push!(raw_board_contents, join(row))
@@ -369,7 +368,7 @@ function is_move_suicidal(pos::Position, move)
   end
   # it's possible to suicide by connecting several friendly groups
   # each of which had one liberty.
-  setdiff!(potential_libs, set([move]))
+  setdiff!(potential_libs, Set([move]))
   return length(potential_libs) == 0
 end
 
@@ -420,7 +419,7 @@ function play_move!(pos::Position, c, color = nothing, mutate = false)
   new_pos = mutate ? pos : deepcopy(pos)
 
   if c == nothing
-    new_pos = pass_move!(new_pos, mutate = mutate)
+    new_pos = pass_move!(new_pos, mutate)
     return new_pos
   end
 
@@ -443,9 +442,8 @@ function play_move!(pos::Position, c, color = nothing, mutate = false)
   if new_pos.to_play == BLACK
     new_caps = (new_pos.caps[1] + length(captured_stones), new_pos.caps[2])
   else
-    new_caps = (new_pos.caps[1], new_pos.caps[1] + length(captured_stones))
+    new_caps = (new_pos.caps[1], new_pos.caps[2] + length(captured_stones))
   end
-
   new_pos.n += 1
   new_pos.caps = new_caps
   new_pos.ko = new_ko
@@ -469,8 +467,8 @@ function score(pos::Position)
       territory_color = WHITE
     else
       territory_color = UNKNOWN # dame, or seki
-      place_stones!(working_board, territory_color, territory)
     end
+    place_stones!(working_board, territory_color, territory)
   end
   return countnz(find(x -> x == BLACK, working_board)) -
   countnz(find(x -> x == WHITE, working_board)) - pos.komi
