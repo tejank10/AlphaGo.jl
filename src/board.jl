@@ -230,7 +230,7 @@ function _handle_captures!(lib_trac::LibertyTracker, captured_stones)
     for n in NEIGHBORS[s...]
       group_id = lib_trac.group_index[n...]
       if group_id != MISSING_GROUP_ID
-        _update_liberties!(lib_trac, group_id; add = Set([1,3)s]))
+        _update_liberties!(lib_trac, group_id; add = Set([s]))
       end
     end
   end
