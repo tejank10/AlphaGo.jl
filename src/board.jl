@@ -42,7 +42,7 @@ end
 function place_stones!(board, color, stones)
   for s in stones
     board[s...] = color
-  end
+  endhttps://www.tutorialspoint.com/python/string_index.htm
 end
 
 #TODO: type of c
@@ -119,7 +119,7 @@ mutable struct LibertyTracker
   liberty_cache::Array{UInt8, 2}
   max_group_id::Int16
 
-  function LibertyTracker(group_index = nothing, groups = nothing,
+  function LibertyTracker(;group_index = nothing, groups = nothing,
     liberty_cache = nothing, max_group_id = 1)
     # group_index: a NxN array of group_ids. -1 means no group
     # groups: a dict of group_id to groups
@@ -390,7 +390,7 @@ function is_move_legal(pos::Position, move)
   return true
 end
 
-function pass_move!(pos::Position, mutate = false)
+function pass_move!(pos::Position; mutate = false)
   new_pos = mutate ? pos : deepcopy(pos)
   new_pos.n += 1
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
@@ -399,7 +399,7 @@ function pass_move!(pos::Position, mutate = false)
   return new_pos
 end
 
-function flip_playerturn!(pos::Position, mutate = false)
+function flip_playerturn!(pos::Position; mutate = false)
   new_pos = mutate ? pos : deepcopy(pos)
   new_pos.ko = nothing
   new_pos.to_play *= -1
@@ -408,7 +408,7 @@ end
 
 get_liberties(pos::Position) = pos.lib_tracker.liberty_cache
 
-function play_move!(pos::Position, c, color = nothing, mutate = false)
+function play_move!(pos::Position, c; color = nothing, mutate = false)
   # Obeys CGOS Rules of Play. defIn short:
   # No suicides
   # Chinese/area scoring
