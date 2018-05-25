@@ -42,7 +42,7 @@ end
 function place_stones!(board, color, stones)
   for s in stones
     board[s...] = color
-  endhttps://www.tutorialspoint.com/python/string_index.htm
+  end
 end
 
 #TODO: type of c
@@ -230,7 +230,7 @@ function _handle_captures!(lib_trac::LibertyTracker, captured_stones)
     for n in NEIGHBORS[s...]
       group_id = lib_trac.group_index[n...]
       if group_id != MISSING_GROUP_ID
-        _update_liberties!(lib_trac, group_id; add = Set([s]))
+        _update_liberties!(lib_trac, group_id; add = Set([1,3)s]))
       end
     end
   end
