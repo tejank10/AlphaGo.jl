@@ -37,6 +37,7 @@ function set_board_size(n::Int = 19)
                             [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]) for (x, y) in ALL_COORDS)
   DIAGONALS = Dict((x, y) => filter(k->check_bounds(k),
                             [(x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)]) for (x, y) in ALL_COORDS)
+  nothing
 end
 
 function place_stones!(board, color, stones)
@@ -138,7 +139,11 @@ function deepcopy(lib_trac::LibertyTracker)
       group.id => Group(group.id, Set(group.stones), Set(group.liberties), group.color)
       for group in values(lib_trac.groups)
   )
-  return LibertyTracker(new_group_index, new_groups, new_lib_cache, lib_trac.max_group_id)
+  return LibertyTracker(
+                  group_index = new_group_index,
+                  groups = new_groups,
+                  liberty_cache = new_lib_cache,
+                  max_group_id = lib_trac.max_group_id)
 end
 
 function from_board(board)
@@ -301,12 +306,13 @@ mutable struct Position
   ko::Any
   recent::Vector{PlayerMove}
   to_play::Int
+  done::Bool
 
   function Position(;board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
     ko = nothing, recent = Vector{PlayerMove}(), to_play = BLACK)
     b = board != nothing ? board : deepcopy(EMPTY_BOARD)
     lib_trac = lib_tracker != nothing ? lib_tracker : from_board(b)
-    new(b, n, komi, caps, lib_trac, ko, recent, to_play)
+    new(b, n, komi, caps, lib_trac, ko, recent, to_play, false)
   end
 end
 
@@ -348,7 +354,8 @@ function show(io::IO, pos::Position)
   annotated_board = join(collect(chain(header_footer_rows, annotated_board_contents,
                                         header_footer_rows)), "\n")
   details = "\nMove: $(pos.n). Captures X: $(captures[1]) O: $(captures[2])\n"
-  println(annotated_board * details)
+  turn = pos.done ? "GAME OVER\n" : "To Play: " * (pos.to_play == BLACK ? "X(BLACK)\n" : "O(WHITE)\n")
+  println(annotated_board * details * turn)
 end
 
 function is_move_suicidal(pos::Position, move)
@@ -396,6 +403,9 @@ function pass_move!(pos::Position; mutate = false)
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
   new_pos.to_play *= -1
   new_pos.ko = nothing
+  if new_pos.recent[end - 1].move == nothing
+    new_pos.done = true
+  end
   return new_pos
 end
 
@@ -419,8 +429,10 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
 
   new_pos = mutate ? pos : deepcopy(pos)
 
+  @assert !new_pos.done
+
   if c == nothing
-    new_pos = pass_move!(new_pos, mutate)
+    new_pos = pass_move!(new_pos; mutate = mutate)
     return new_pos
   end
 
@@ -476,13 +488,12 @@ function score(pos::Position)
 end
 
 function result(pos::Position)
-  score = score(pos)
-  if score > 0
-    return "B+" * @sprintf("%.1f", score)
-  elseif score < 0
-    return "W+" *  @sprintf("%.1f", abs(score))
+  points = score(pos)
+  if points > 0
+    return "B+" * @sprintf("%.1f", points)
+  elseif points < 0
+    return "W+" *  @sprintf("%.1f", abs(points))
   else
     return "DRAW"
   end
 end
-set_board_size(19);

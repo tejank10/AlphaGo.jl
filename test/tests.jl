@@ -1,7 +1,7 @@
 include("test_utils.jl")
 using go: parse_kgs_coords, parse_sgf_coords, Position, PlayerMove
 using Base.Test: @test, @test_throws
-go.set_board_size(9)
+go.set_board_size(9);
 
 EMPTY_ROW = repeat(".", go.N) * '\n'
 TEST_BOARD = load_board("""
@@ -483,7 +483,6 @@ function test_ko_move()
       to_play = WHITE
   )
   actual_position = go.play_move!(start_position, parse_kgs_coords("A9"))
-
   assertEqualPositions(actual_position, expected_position)
 
   # Check that retaking ko is illegal until two intervening moves
@@ -503,6 +502,7 @@ function test_ko_move()
           PlayerMove(WHITE, parse_kgs_coords("B9"))]),
       to_play = BLACK
       )
+
       assertEqualPositions(ko_delayed_retake, expected_position)
 end
 
