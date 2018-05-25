@@ -305,7 +305,7 @@ mutable struct Position
   function Position(;board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
     ko = nothing, recent = Vector{PlayerMove}(), to_play = BLACK)
     b = board != nothing ? board : deepcopy(EMPTY_BOARD)
-    lib_trac = lib_tracker != nothing ? lib_tracker : from_board(board)
+    lib_trac = lib_tracker != nothing ? lib_tracker : from_board(b)
     new(b, n, komi, caps, lib_trac, ko, recent, to_play)
   end
 end
@@ -341,13 +341,14 @@ function show(io::IO, pos::Position)
     push!(raw_board_contents, join(row))
   end
 
+  row_labels_fmt = [@sprintf("%2d ", i) for i = N:-1:1]
   row_labels = [string(i) for i = N:-1:1]
-  annotated_board_contents = [join(r) for r in zip(row_labels, raw_board_contents, row_labels)]
+  annotated_board_contents = [join(r) for r in zip(row_labels_fmt, raw_board_contents, row_labels)]
   header_footer_rows = ["   " * join("ABCDEFGHJKLMNOPQRST"[1:N], " ") * "   "]
   annotated_board = join(collect(chain(header_footer_rows, annotated_board_contents,
                                         header_footer_rows)), "\n")
   details = "\nMove: $(pos.n). Captures X: $(captures[1]) O: $(captures[2])\n"
-  return annotated_board * details
+  println(annotated_board * details)
 end
 
 function is_move_suicidal(pos::Position, move)
@@ -484,4 +485,4 @@ function result(pos::Position)
     return "DRAW"
   end
 end
-set_board_size(19)
+set_board_size(19);
