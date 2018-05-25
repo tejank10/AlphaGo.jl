@@ -403,7 +403,7 @@ function pass_move!(pos::Position; mutate = false)
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
   new_pos.to_play *= -1
   new_pos.ko = nothing
-  if new_pos.recent[end - 1].move == nothing
+  if length(new_pos.recent) > 1 && new_pos.recent[end - 1].move == nothing
     new_pos.done = true
   end
   return new_pos

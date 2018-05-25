@@ -375,6 +375,7 @@ function test_legal_moves()
   end
   # pass should also be legal
   go.play_move!(pass_position, nothing)
+  nothing
 end
 
 function test_move()
