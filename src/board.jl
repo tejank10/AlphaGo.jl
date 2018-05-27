@@ -324,7 +324,7 @@ function deepcopy(pos::Position)
 end
 
 function show(io::IO, pos::Position)
-  pretty_print_map = Dict{Int, Char}([
+  pretty_print_map = Dict{Int, String}([
             WHITE => "O",
             EMPTY => ".",
             BLACK => "X",
