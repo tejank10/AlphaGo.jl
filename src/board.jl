@@ -325,11 +325,11 @@ end
 
 function show(io::IO, pos::Position)
   pretty_print_map = Dict{Int, Char}([
-            WHITE => 'O',
-            EMPTY => '.',
-            BLACK => 'X',
-            FILL => '#',
-            KO => '*'
+            WHITE => "O",
+            EMPTY => ".",
+            BLACK => "X",
+            FILL => "#",
+            KO => "*"
         ])
   board = deepcopy(pos.board)
   captures = pos.caps
@@ -341,7 +341,7 @@ function show(io::IO, pos::Position)
   for i = 1:N
     row = []
     for j = 1:N
-      appended = (length(pos.recent) != 0 && (i, j) == pos.recent[end].move) ? '<' : ' '
+      appended = (length(pos.recent) != 0 && (i, j) == pos.recent[end].move) ? "<" : " "
       push!(row, pretty_print_map[board[i,j]] * appended)
     end
     push!(raw_board_contents, join(row))
