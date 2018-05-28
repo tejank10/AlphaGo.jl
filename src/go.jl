@@ -18,13 +18,16 @@ show(io::IO, game::env) = show(game.pos)
 
 is_over(game::env) = game.pos.done
 
-function step!(game::env, action)
+function step!(game::env, action; coord = "KGS", show_board = false)
   s = game.pos.board, game.pos.to_play
-  a = action == nothing ? action : from_kgs(action)
+  a = coord == "KGS" ? from_kgs(action) : from_sgf(action)
   r = 0
   try play_move!(game.pos, a; mutate = true) catch; r = -10 end # negative reward for playing illegal moves
   s′ = game.pos.board, game.pos.to_play
   done = game.pos.done
+  if show_board
+    print(game.pos)
+  end
   return (s, a, r, s′, done)
 end
 
