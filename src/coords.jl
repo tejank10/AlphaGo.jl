@@ -1,9 +1,11 @@
 _KGS_COLUMNS = "ABCDEFGHJKLMNOPQRST"
 _SGF_COLUMNS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-to_flat(c) = N * (c[2] - 1) + c[1]
+# Converts from a board coordinate to a flattened coordinate
+to_flat(coord) = c == nothing ? N * N + 1 : N * (coord[2] - 1) + coord[1]
 
-from_flat(f) = tuple([i + 1 for i in reverse(divrem(f - 1, N))...])
+# Converts from a flattened coordinate to a board coordinate
+from_flat(f) = f == N * N + 1 ? nothing : tuple([i + 1 for i in reverse(divrem(f - 1, N))]...)
 
 function from_sgf(sgfc)
   # Interprets coords. aa is top left corner; sa is top right corner

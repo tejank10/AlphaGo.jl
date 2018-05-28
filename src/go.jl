@@ -2,7 +2,7 @@ module go
 export show, is_over, step!, make_env
 
 include("board.jl")
-include("utils.jl")
+include("coords.jl")
 
 action_space = N * N  + 1 # N² + pass move
 
@@ -20,7 +20,7 @@ is_over(game::env) = game.pos.done
 
 function step!(game::env, action)
   s = game.pos.board, game.pos.to_play
-  a = action == nothing ? action : parse_kgs_coords(action)
+  a = action == nothing ? action : from_kgs(action)
   r = 0
   try play_move!(game.pos, a; mutate = true) catch; r = -10 end # negative reward for playing illegal moves
   s′ = game.pos.board, game.pos.to_play
