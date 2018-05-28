@@ -387,7 +387,7 @@ function is_move_suicidal(pos::Position, move)
   # it's possible to suicide by connecting several friendly groups
   # each of which had one liberty.
   setdiff!(potential_libs, Set([move]))
-  return length(potential_libs) == 0
+  return !isempty(potential_libs)
 end
 
 function is_move_legal(pos::Position, move)
