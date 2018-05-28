@@ -2,6 +2,7 @@
 This is Julia implementation of Go Board by Tejan Karmali.
 Original Python version of the implementation of Go by
 Brian Lee (https://github.com/brilee/MuGo/blob/master/go.py)
+(https://github.com/tensorflow/minigo)
 =#
 
 import Base: ==, deepcopy, show
@@ -467,6 +468,7 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
 end
 
 function score(pos::Position)
+  # Return score from B perspective. If W is winning, score is negative.
   working_board = deepcopy(pos.board)
   while EMPTY ∈ working_board
     unassigned_spaces = find(x -> x == EMPTY, working_board)

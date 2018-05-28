@@ -504,7 +504,7 @@ function test_ko_move()
       to_play = BLACK
       )
 
-      assertEqualPositions(ko_delayed_retake, expected_position)
+  assertEqualPositions(ko_delayed_retake, expected_position)
 end
 
 function test_scoring()
