@@ -295,6 +295,9 @@ mutable struct Position
   lib_tracker: a LibertyTracker object
   ko: a Move
   recent: a tuple of PlayerMoves, such that recent[end] is the last move.
+  board_deltas: an array of shape (N, N, n) representing changes
+      made to the board at each move (played move and captures).
+      Should satisfy next_pos.board - next_pos.board_deltas[:, :, 0] == pos.board
   to_play: BLACK or WHITE
   =#
 
@@ -305,14 +308,17 @@ mutable struct Position
   lib_tracker::LibertyTracker
   ko::Any
   recent::Vector{PlayerMove}
+  board_deltas::Array{Int8, 3}
   to_play::Int
+  last_eight::Any
   done::Bool
 
   function Position(;board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
-    ko = nothing, recent = Vector{PlayerMove}(), to_play = BLACK)
+    ko = nothing, recent = Vector{PlayerMove}(), board_deltas = nothing, to_play = BLACK)
     b = board != nothing ? board : deepcopy(EMPTY_BOARD)
     lib_trac = lib_tracker != nothing ? lib_tracker : from_board(b)
-    new(b, n, komi, caps, lib_trac, ko, recent, to_play, false)
+    bd = board_deltas != nothing ? board_deltas : zeros(Int8, N, N, 0)
+    new(b, n, komi, caps, lib_trac, ko, recent, bd, to_play, nothing, false)
   end
 end
 
@@ -320,7 +326,8 @@ function deepcopy(pos::Position)
   new_board = deepcopy(pos.board)
   new_lib_tracker = deepcopy(pos.lib_tracker)
   return Position(;board = new_board, n = pos.n, komi = pos.komi, caps = pos.caps,
-  lib_tracker = new_lib_tracker, ko = pos.ko, recent = pos.recent, to_play = pos.to_play)
+                  lib_tracker = new_lib_tracker, ko = pos.ko, recent = pos.recent,
+                  board_deltas = pos.board_deltas, to_play = pos.to_play, done = pos.done)
 end
 
 function show(io::IO, pos::Position)
@@ -401,6 +408,7 @@ function pass_move!(pos::Position; mutate = false)
   new_pos = mutate ? pos : deepcopy(pos)
   new_pos.n += 1
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
+  new_pos.board_deltas = cat([3], (zeros(Int8, N, N, 1), new_pos.board_deltas[:, :, 1:5]))
   new_pos.to_play *= -1
   new_pos.ko = nothing
   if length(new_pos.recent) > 1 && new_pos.recent[end - 1].move == nothing
@@ -448,6 +456,10 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
 
   opp_color = -color
 
+  new_board_delta = zeros(Int8, N, N)
+  new_board_delta[c...] = color
+  place_stones!(new_board_delta, color, captured_stones)
+
   if length(captured_stones) == 1 && potential_ko == opp_color
     new_ko = collect(captured_stones)[1]
   else
@@ -463,6 +475,12 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
   new_pos.caps = new_caps
   new_pos.ko = new_ko
   push!(new_pos.recent, PlayerMove(color, c))
+  # keep a rolling history of last 7 deltas - that's all we'll need to
+  # extract the last 8 board states.
+
+  get_first_six(x::Array{Int8, 3}) = size(x, 3) < 7 ? x : x[:, :, 1:6]
+
+  new_pos.board_deltas = cat(3, (reshape(new_board_delta, N, N, 1), get_first_six(new_pos.board_deltas)))
   new_pos.to_play *= -1
   return new_pos
 end
