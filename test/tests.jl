@@ -502,6 +502,15 @@ function test_ko_move()
   assertEqualPositions(ko_delayed_retake, expected_position)
 end
 
+function test_is_game_over()
+  root = Position()
+  @test !root.done
+  first_pass = go.play_move!(root, nothing)
+  @test !first_pass.done
+  second_pass = go.play_move!(first_pass, nothing)
+  @test second_pass.done
+end
+
 function test_scoring()
   board = load_board("""
       .XX......

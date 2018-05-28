@@ -184,43 +184,43 @@ function from_board(board)
   return lib_tracker
 end
 
-function _create_group!(lib_trac::LibertyTracker, color, c::NTuple{2, Int},
-  liberties::Set{NTuple{2, Int}})
+function _merge_from_played!(lib_trac::LibertyTracker, color, played, libs, other_group_ids)
+  stones = Set([played])
+  liberties = Set{NTuple{2, Int}}(libs)
+  for group_id in other_group_ids
+    other = pop!(lib_trac.groups, group_id)
+    union!(stones, other.stones)
+    union!(liberties, other.liberties)
+  end
+
+  if !isempty(other_group_ids)
+    setdiff!(liberties, Set([played]))
+  end
+
+  @assert setdiff(stones, liberties) == stones
+
   lib_trac.max_group_id += 1
-  new_group = Group(lib_trac.max_group_id, Set([c]), liberties, color)
-  lib_trac.groups[new_group.id] = new_group
-  lib_trac.group_index[c...] = new_group.id
-  lib_trac.liberty_cache[c...] = length(liberties)
-  return new_group
+  result = Group(lib_trac.max_group_id, stones, liberties, color)
+  lib_trac.groups[result.id] = result
+
+  for s in result.stones
+    lib_trac.group_index[s...] = result.id
+    lib_trac.liberty_cache[s...] = length(result.liberties)
+  end
+  return result
 end
 
-function _update_liberties!(lib_trac::LibertyTracker, group_id::Integer; add = nothing, remove = nothing)
-  group = lib_trac.groups[group_id]
-  if add != nothing
-    union!(group.liberties, add)
-  end
-  if remove != nothing
-    setdiff!(group.liberties, remove)
-  end
+function _update_liberties!(lib_trac::LibertyTracker, group_id::Integer;
+  add = Set{NTuple{2, Int}}(), remove = Set{NTuple{2, Int}}())
 
-  new_lib_count = length(group.liberties)
-  for s in group.stones
+  group = lib_trac.groups[group_id]
+  new_libs = setdiff(group.liberties ∪ add, remove)
+  lib_trac.groups[group_id] = Group(group_id, group.stones, new_libs, group.color)
+
+  new_lib_count = length(new_libs)
+  for s in lib_trac.groups[group_id].stones
     lib_trac.liberty_cache[s...] = new_lib_count
   end
-end
-
-function _merge_groups!(lib_trac::LibertyTracker, group1_id::Int, group2_id::Int)
-  group1 = lib_trac.groups[group1_id]
-  group2 = lib_trac.groups[group2_id]
-  union!(group1.stones, group2.stones)
-  delete!(lib_trac.groups, group2_id)
-  for s in group2.stones
-    lib_trac.group_index[s...] = group1_id
-  end
-
-  _update_liberties!(lib_trac, group1_id; add = group2.liberties, remove = union(group2.stones, group1.stones))
-
-  return group1
 end
 
 function _capture_group!(lib_trac::LibertyTracker, group_id::Integer)
@@ -266,11 +266,10 @@ function add_stone!(lib_trac::LibertyTracker, color, c)
     end
   end
 
-  new_group = _create_group!(lib_trac, color, c, empty_neighbors)
+  new_group = _merge_from_played!(lib_trac, color, c, empty_neighbors, friendly_neighboring_group_ids)
 
-  for group_id in friendly_neighboring_group_ids
-    new_group = _merge_groups!(lib_trac, group_id, new_group.id)
-  end
+  # new_group becomes stale as _update_liberties and
+  # _handle_captures are called; must refetch with lib_trac.groups[new_group.id]
   for group_id in opponent_neighboring_group_ids
     neighbor_group = lib_trac.groups[group_id]
     if length(neighbor_group.liberties) == 1
@@ -283,7 +282,7 @@ function add_stone!(lib_trac::LibertyTracker, color, c)
   _handle_captures!(lib_trac, captured_stones)
 
   # suicide is illegal
-  if length(new_group.liberties) == 0
+  if length(lib_trac.groups[new_group.id].liberties) == 0
     throw(IllegalMove())
   end
 
