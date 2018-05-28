@@ -46,7 +46,6 @@ function place_stones!(board, color, stones)
   end
 end
 
-#TODO: type of c
 function find_reached(board, c)
   color = board[c...]
   chain = Set([c])
@@ -440,13 +439,15 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
     throw(IllegalMove())
   end
 
+  potential_ko = is_koish(new_pos.board, c)
+
   place_stones!(new_pos.board, color, [c])
   captured_stones = add_stone!(new_pos.lib_tracker, color, c)
   place_stones!(new_pos.board, EMPTY, captured_stones)
 
   opp_color = -color
 
-  if length(captured_stones) == 1 && is_koish(pos.board, c) == opp_color
+  if length(captured_stones) == 1 && potential_ko == opp_color
     new_ko = collect(captured_stones)[1]
   else
     new_ko = nothing
