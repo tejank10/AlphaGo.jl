@@ -1,7 +1,6 @@
 #=
 This is Julia implementation of Go Board by Tejan Karmali.
-Original Python version of the implementation of Go by
-Brian Lee (https://github.com/brilee/MuGo/blob/master/go.py)
+Reference: Python version of the implementation of Go by
 (https://github.com/tensorflow/minigo)
 =#
 
@@ -18,12 +17,6 @@ struct PlayerMove
 end
 
 struct IllegalMove <:Exception end
-
-N = 19
-ALL_COORDS = Vector{NTuple{2, Int}}()
-EMPTY_BOARD = nothing
-NEIGHBORS = Dict{NTuple{2, Int}, Array{NTuple{2, Int}, 1}}()
-DIAGONALS = Dict{NTuple{2, Int}, Array{NTuple{2, Int}, 1}}()
 
 function set_board_size(n::Int = 19)
   global N, ALL_COORDS, EMPTY_BOARD, NEIGHBORS, DIAGONALS
@@ -387,7 +380,7 @@ function is_move_suicidal(pos::Position, move)
   # it's possible to suicide by connecting several friendly groups
   # each of which had one liberty.
   setdiff!(potential_libs, Set([move]))
-  return !isempty(potential_libs)
+  return isempty(potential_libs)
 end
 
 function is_move_legal(pos::Position, move)

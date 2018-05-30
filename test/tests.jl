@@ -1,5 +1,6 @@
 include("test_utils.jl")
-using go: from_kgs, from_sgf, from_flat, Position, PlayerMove
+include("../src/go.jl")
+using go: from_kgs, from_flat, Position, PlayerMove, BLACK, WHITE, EMPTY
 using Base.Test: @test, @test_throws
 go.set_board_size(9);
 
@@ -12,16 +13,16 @@ TEST_BOARD = load_board("""
 pc_set(string) = Set(map(from_kgs, split(string)))
 
 function test_load_board()
-  @test assertEqualArray(go.go.EMPTY_BOARD, zeros(go.N, go.N))
-  @test assertEqualArray(go.go.EMPTY_BOARD, load_board(repeat(". \n", go.N ^ 2)))
+  @test assertEqualArray(go.EMPTY_BOARD, zeros(go.N, go.N))
+  @test assertEqualArray(go.EMPTY_BOARD, load_board(repeat(". \n", go.N ^ 2)))
 end
 
 function test_parsing()
   @test from_kgs("A9") == (1, 1)
-  @test from_sgf("aa") == (1, 1)
+  @test go.from_sgf("aa") == (1, 1)
   @test from_kgs("A3") == (7, 1)
-  @test from_sgf("ac") == (3, 1)
-  @test from_kgs("D4") == from_sgf("df")
+  @test go.from_sgf("ac") == (3, 1)
+  @test from_kgs("D4") == go.from_sgf("df")
 end
 
 function test_neighbors()
@@ -276,7 +277,7 @@ function test_passing()
       recent = [PlayerMove(BLACK, nothing)],
       to_play = WHITE
   )
-  pass_position = go.go.pass_move!(start_position)
+  pass_position = go.pass_move!(start_position)
   assertEqualPositions(pass_position, expected_position)
 end
 
@@ -357,7 +358,7 @@ function test_legal_moves()
   # check that the bulk legal test agrees with move-by-move illegal test.
   bulk_legality = go.all_legal_moves(position)
   for (i, bulk_legal) in enumerate(bulk_legality)
-    @test go.is_move_legal(position, from_flat(i)) == bulk_legal
+    @test go.is_move_legal(position, go.from_flat(i)) == bulk_legal
   end
   # flip the colors and check that everything is still (il)legal
   position = Position(board = -board, to_play = WHITE)
@@ -369,7 +370,7 @@ function test_legal_moves()
   end
   bulk_legality = go.all_legal_moves(position)
   for (i, bulk_legal) in enumerate(bulk_legality)
-    @test go.is_move_legal(position, from_flat(i)) == bulk_legal
+    @test go.is_move_legal(position, go.from_flat(i)) == bulk_legal
   end
 end
 

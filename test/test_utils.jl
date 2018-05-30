@@ -1,13 +1,8 @@
-include("../src/go.jl")
-using go: WHITE, BLACK, EMPTY
-
-go.set_board_size(9)
-
 function load_board(str)
   reverse_map = Dict{Char, Int}([
-      'X' => BLACK,
-      'O' => WHITE,
-      '.' => EMPTY,
+      'X' => go.BLACK,
+      'O' => go.WHITE,
+      '.' => go.EMPTY,
       '#' => go.FILL,
       '*' => go.KO,
       '?' => go.UNKNOWN

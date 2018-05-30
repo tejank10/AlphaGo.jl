@@ -2,7 +2,7 @@ _KGS_COLUMNS = "ABCDEFGHJKLMNOPQRST"
 _SGF_COLUMNS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # Converts from a board coordinate to a flattened coordinate
-to_flat(coord) = c == nothing ? N * N + 1 : N * (coord[2] - 1) + coord[1]
+to_flat(coord) = coord == nothing ? N * N + 1 : N * (coord[2] - 1) + coord[1]
 
 # Converts from a flattened coordinate to a board coordinate
 from_flat(f) = f == N * N + 1 ? nothing : tuple([i + 1 for i in reverse(divrem(f - 1, N))]...)

@@ -1,17 +1,17 @@
+# Run set_board_size(N::Int) once you include go.jl
+
 module go
 export show, is_over, step!, make_env
 
 include("board.jl")
 include("coords.jl")
 
-action_space = N * N  + 1 # N² + pass move
+action_space() = N * N  + 1 # N² + pass move
 
-state_space = N * N # Board size
+state_space() = N * N # Board size
 
 mutable struct env
   pos::Position
-  action_space
-  state_space
 end
 
 show(io::IO, game::env) = show(game.pos)
