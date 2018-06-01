@@ -1,3 +1,4 @@
+# This code is originally written by Avik Pal
 struct ResidualBlock
     conv_layers
     norm_layers
