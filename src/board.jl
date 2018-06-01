@@ -306,7 +306,6 @@ mutable struct Position
   recent::Vector{PlayerMove}
   board_deltas::Array{Int8, 3}
   to_play::Int
-  last_eight::Any
   done::Bool
 
   function Position(;board = nothing, n = 0, komi = 7.5, caps = (0, 0), lib_tracker = nothing,
@@ -314,7 +313,7 @@ mutable struct Position
     b = board != nothing ? board : deepcopy(EMPTY_BOARD)
     lib_trac = lib_tracker != nothing ? lib_tracker : from_board(b)
     bd = board_deltas != nothing ? board_deltas : zeros(Int8, N, N, 0)
-    new(b, n, komi, caps, lib_trac, ko, recent, bd, to_play, nothing, false)
+    new(b, n, komi, caps, lib_trac, ko, recent, bd, to_play, false)
   end
 end
 

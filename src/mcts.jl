@@ -10,19 +10,19 @@ Reference: Python version of the implementation of MCTS by
 using DataStructures
 using Distributions: Dirichlet
 
+# Exploration constant balancing priors vs. value net output
+c_puct = 1.38
+# How much to weight the priors vs. dirichlet noise when mixing
+dirichlet_noise_weight = 0.25
+
 function set_mcts_params()
-  global max_game_length, c_puct, dirichlet_noise_alpha, dirichlet_noise_weight
+  global max_game_length, dirichlet_noise_alpha
   # 505 moves for 19x19, 113 for 9x9
   # Move number at which game is forcibly terminated
   max_game_length = (go.N ^ 2 * 7) ÷ 5
 
-  # Exploration constant balancing priors vs. value net output
-  c_puct = 1.38
-
   # Concentrated-ness of the noise being injected into priors
   dirichlet_noise_alpha = 0.03 * 361 / (go.N ^ 2)
-  # How much to weight the priors vs. dirichlet noise when mixing
-  dirichlet_noise_weight = 0.25
 end
 
 mutable struct DummyNode
