@@ -20,7 +20,7 @@ struct IllegalMove <:Exception end
 
 function set_board_size(n::Int = 19)
   global N, ALL_COORDS, EMPTY_BOARD, NEIGHBORS, DIAGONALS
-  n ∈ (9, 13, 17, 19) || error("Illegal board size $n")
+  #n ∈ (9, 13, 17, 19) || error("Illegal board size $n")
   N = n
   ALL_COORDS = [(i, j) for i = 1:n for j = 1:n]
   EMPTY_BOARD = zeros(Int8, n, n)
@@ -299,10 +299,10 @@ mutable struct Position
 
   board::Array{Int8, 2}
   n::Int
-  komi::Float64
+  komi::Float32
   caps::NTuple{2, Int}
   lib_tracker::LibertyTracker
-  ko::Any
+  ko
   recent::Vector{PlayerMove}
   board_deltas::Array{Int8, 3}
   to_play::Int
@@ -320,8 +320,9 @@ end
 function deepcopy(pos::Position)
   new_board = deepcopy(pos.board)
   new_lib_tracker = deepcopy(pos.lib_tracker)
-  return Position(;board = new_board, n = pos.n, komi = pos.komi, caps = pos.caps,
-                  lib_tracker = new_lib_tracker, ko = pos.ko, recent = pos.recent,
+  new_recent = deepcopy(pos.recent)
+  return Position(; board = new_board, n = pos.n, komi = pos.komi, caps = pos.caps,
+                  lib_tracker = new_lib_tracker, ko = pos.ko, recent = new_recent,
                   board_deltas = pos.board_deltas, to_play = pos.to_play)
 end
 
@@ -343,7 +344,7 @@ function show(io::IO, pos::Position)
   for i = 1:N
     row = []
     for j = 1:N
-      appended = (length(pos.recent) != 0 && (i, j) == pos.recent[end].move) ? "<" : " "
+      appended = length(pos.recent) != 0 && (i, j) == pos.recent[end].move ? "<" : " "
       push!(row, pretty_print_map[board[i,j]] * appended)
     end
     push!(raw_board_contents, join(row))
@@ -424,7 +425,7 @@ function all_legal_moves(pos::Position)
 
   # ...and retaking ko is always illegal
   if pos.ko != nothing
-    legal_moves[ko...] = 0
+    legal_moves[pos.ko...] = 0
   end
 
   # and pass is always legal
@@ -536,10 +537,50 @@ end
 function result(pos::Position)
   points = score(pos)
   if points > 0
+    return 1
+  elseif points < 0
+    return -1
+  else
+    return 0
+  end
+end
+
+function result_string(pos::Position)
+  points = score(pos)
+  if points > 0
     return "B+" * @sprintf("%.1f", points)
   elseif points < 0
     return "W+" *  @sprintf("%.1f", abs(points))
   else
     return "DRAW"
   end
+end
+
+struct PositionWithContext
+  position::Position
+  next_move
+  result::Int
+end
+
+function replay_position(pos::Position, result)
+  #=
+  Wrapper for a go.Position which replays its history.
+  Assumes an empty start position! (i.e. no handicap, and history must be exhaustive.)
+
+  Result must be passed in, since a resign cannot be inferred from position
+  history alone.
+
+  for position_w_context in replay_position(position):
+    print(position_w_context.position)
+  =#
+  pos.n == length(pos.recent) ? nothing : throw(AssertionError("Position history is incomplete"))
+  replay_buffer = Vector{PositionWithContext}()
+  dummy_pos = Position(komi = pos.komi)
+
+  for player_move in pos.recent
+    color, next_move = player_move.color, player_move.move
+    push!(replay_buffer, PositionWithContext(dummy_pos, next_move, result))
+    dummy_pos = play_move!(dummy_pos, next_move, color = color)
+  end
+  return replay_buffer
 end

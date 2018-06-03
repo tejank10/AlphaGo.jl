@@ -1,22 +1,26 @@
+using StatsBase: sample
+
 mutable struct MCTSPlayer
-  network::Chain
-  num_readouts
-  two_player_mode
-  τ_threshold
-  qs
-  searches_π
-  result
+  network
+  num_readouts::Int
+  two_player_mode::Bool
+  τ_threshold::Int
+  qs::Vector{Float32}
+  searches_π::Vector{Vector{Float32}}
+  result::Int
+  result_string
   root
   resign_threshold
+  position
 
-  function MCTSPlayer(network, num_readouts = 0, two_player_mode = false,
+  function MCTSPlayer(network; num_readouts = 0, two_player_mode = false,
                resign_threshold = nothing)
-    num_readouts = num_readouts == nothing ? FLAGS.num_readouts : num_readouts
-    τ_threshold = two_player_mode ? -1 : FLAGS.softpick_move_cutoff
-    resign_threshold = resign_threshold == nothing ? FLAGS.resign_threshold :
-                                                              resign_threshold
+    num_readouts = num_readouts == nothing ? 800 : num_readouts
+    τ_threshold = two_player_mode ? -1 : (go.N * go.N ÷ 12) ÷ 2 * 2
+    resign_threshold = resign_threshold == nothing ? -0.9 : resign_threshold
     new(network, num_readouts, two_player_mode, τ_threshold,
-        [], [], 0, nothing, resign_threshold)
+        Array{Float32, 1}(), Array{Array{Float32, 1}, 1}(), 0, "",
+        nothing, resign_threshold, nothing)
   end
 end
 
@@ -29,20 +33,20 @@ function play_move!(mcts_player::MCTSPlayer, c)
       `inject_noise` calls.
   =#
   if !mcts_player.two_player_mode
-    push!(searches_π(mcts_player), mcts_player.root.children_as_π(
-    mcts_player.root.position.n <= mcts_player.temp_threshold))
+    push!(mcts_player.searches_π, children_as_π(mcts_player.root,
+    mcts_player.root.position.n <= mcts_player.τ_threshold))
   end
   push!(mcts_player.qs, Q(mcts_player.root))  # Save our resulting Q.
   try
     mcts_player.root = maybe_add_child!(mcts_player.root, go.to_flat(c))
-  catch go.IllegalMove:
-    print("Illegal move")
-    if ! mcts_player.two_player_mode pop!(mcts_player.searches_π) end
+  catch go.IllegalMove
+    println("Illegal move")
+    if !mcts_player.two_player_mode pop!(mcts_player.searches_π) end
     pop!(mcts_player.qs)
     return false
   end
   mcts_player.position = mcts_player.root.position  # for showboard
-  # del self.root.parent.children
+  mcts_player.root.parent.children = Dict()
   return true
 end
 
@@ -50,29 +54,26 @@ function pick_move(mcts_player::MCTSPlayer)
   #= Picks a move to play, based on MCTS readout statistics.
 
   Highest N is most robust indicator. In the early stage of the game, pick
-  a move weighted by visit count; later on, pick the absolute max.=#
-  if mcts_player.root.position.n >= mcts_player.τ_threshold:
+  a move weighted by visit count; later on, pick the absolute max. =#
+  if mcts_player.root.position.n >= mcts_player.τ_threshold
     fcoord = findmax(mcts_player.root.child_N)[2]
   else
-    child_N_exp = mcts_player.root.child_N .^ (1 / τ)
-    π = child_N_exp ./ sum(child_N_exp)
+    π = children_as_π(mcts_player.root, true)
     fcoord = sample(1:length(π), Weights(π))
     @assert mcts_player.root.child_N[fcoord] != 0
-  return coords.from_flat(fcoord)
+  end
+  return go.from_flat(fcoord)
 end
 
-function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = nothing)
-  if parallel_readouts == nothing
-    parallel_readouts = FLAGS.parallel_readouts
-  end
-  leaves = Array{MCTSNode, 1}()
+function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)
+  leaves = Vector{MCTSNode}()
   failsafe = 0
   while length(leaves) < parallel_readouts && failsafe < 2parallel_readouts
     failsafe += 1
-    leaf = select_leaf!(mcts_player.root)
+    leaf = select_leaf(mcts_player.root)
     # if game is over, override the value estimate with the true score
     if is_done(leaf)
-      value = score(leaf.position) > 0 ? 1 : -1
+      value = go.score(leaf.position) > 0 ? 1 : -1
       backup_value!(leaf, value, mcts_player.root)
       continue
     end
@@ -80,12 +81,51 @@ function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = nothing)
     push!(leaves, leaf)
   end
   if !isempty(leaves)
-    #TODO: network
-    move_probs, values = network.run_many([leaf.position for leaf in leaves])
+    move_probs, values = mcts_player.network([leaf.position for leaf in leaves])
+    move_probs, values = move_probs.tracker.data, values.tracker.data
+    move_probs = [move_probs[:, i] for i = 1:size(move_probs, 2)]
     for (leaf, move_prob, value) in zip(leaves, move_probs, values)
       revert_virtual_loss!(leaf, mcts_player.root)
       incorporate_results!(leaf, move_prob, value, mcts_player.root)
     end
   end
   return leaves
+end
+
+function set_result!(mcts_player::MCTSPlayer, winner, was_resign)
+  mcts_player.result = winner
+  if was_resign
+    string = winner == go.BLACK ? "B+R" : "W+R"
+  else
+    string = go.result_string(mcts_player.root.position)
+  end
+  mcts_player.result_string = string
+end
+
+function initialize_game!(mcts_player::MCTSPlayer, pos = go.Position())
+  mcts_player.root = MCTSNode(pos)
+  mcts_player.result = 0
+  mcts_player.searches_π = Vector{Vector{Float32}}()
+  mcts_player.qs = Vector{Float32}()
+end
+
+is_done(mcts_player::MCTSPlayer) = mcts_player.result != 0 || is_done(mcts_player.root)
+
+# Returns true if the player resigned.  No further moves should be played
+
+should_resign(mcts_player::MCTSPlayer) = Q_perspective(mcts_player.root) < mcts_player.resign_threshold
+
+function extract_data(mcts_player::MCTSPlayer)
+  @assert length(mcts_player.searches_π) == mcts_player.root.position.n
+  @assert mcts_player.result != 0
+  positions = Vector{go.Position}()
+  πs = hcat(mcts_player.searches_π...)
+  results = Vector{Int}()
+
+  pwcs = go.replay_position(mcts_player.root.position, mcts_player.result)
+  for pwc in pwcs
+    push!(positions, pwc.position)
+    push!(results, pwc.result)
+  end
+  return positions, πs, results
 end

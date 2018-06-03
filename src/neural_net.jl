@@ -1,10 +1,15 @@
-mutable struct neural_net
+import Flux.testmode!
+
+include("resnet.jl")
+#TODO: gpu
+mutable struct NeuralNet
   base_net::Chain
   value::Chain
   policy::Chain
-
-  function neural_net(; base_net = nothing, value = nothing, policy = nothing,
-                          tower_height::Int = 19)
+  opt
+  c::Float32
+  function NeuralNet(; base_net = nothing, value = nothing, policy = nothing,
+                          tower_height::Int = 19, c::Float32 = 1e-4)
     if base_net == nothing
       res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
@@ -13,26 +18,104 @@ mutable struct neural_net
                         tower...)
     end
     if value == nothing
-      value = Chain(Conv((1,1), 256=>1, pad=(1,1)), BatchNorm(1, relu), x->reshape(x, :, size(x, 4)),
+      value = Chain(Conv((1,1), 256=>1), BatchNorm(1, relu), x->reshape(x, :, size(x, 4)),
                     Dense(go.N*go.N, 256, relu), Dense(256, 1, tanh))
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2go.N*go.N, go.N*go.N+1, softmax))
+                      Dense(2go.N*go.N, go.N*go.N+1))
     end
-    new(base_net, value, policy)
+
+    all_params = cat(1, params(base_net), params(value), params(policy))
+    opt = ADAM(all_params)
+    new(base_net, value, policy, opt, c)
   end
 end
 
-function deepcopy(nn::neural_net)
+function deepcopy(nn::NeuralNet)
   base_net = deepcopy(nn.base_net)
   value = deepcopy(nn.value)
   policy = deepcopy(nn.policy)
-  return neural_net(base_net, value, policy)
+  return NeuralNet(base_net, value, policy)
 end
 
-function (nn::neural_net)(input::Array{go.Position, 1})
+function testmode!(nn::NeuralNet, val::Bool=true)
+  testmode!(nn.base_net, val)
+  testmode!(nn.policy, val)
+  testmode!(nn.value, val)
+end
+
+function (nn::NeuralNet)(input::Vector{go.Position})
   nn_in = cat(4, get_feats.(input)...)
+  testmode!(nn)
+
   common_out = nn.base_net(nn_in)
   π, val = nn.policy(common_out), nn.value(common_out)
+  testmode!(nn, false)
+
+  return π, val
+end
+
+(nn::NeuralNet)(input::go.Position) = nn([input])
+
+loss_π(π, p) = crossentropy(softmax(π), p)
+
+loss_value(z, v) = mse(z, v)
+
+loss_reg(nn::NeuralNet) = nn.c * (sum(vecnorm, params(nn.base_net)) +
+                           sum(vecnorm, params(nn.value)) +
+                           sum(vecnorm, params(nn.policy)))
+
+function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}})
+  positions, π, z = input_data
+  p, v = nn(positions)
+  loss = loss_π(π, p) + loss_value(z, v) + loss_reg(nn)
+  back!(loss)
+  nn.opt()
+end
+
+function evaluate(black_net::NeuralNet, white_net::NeuralNet;
+  num_games = 400, num_sims = 1600)
+  games_won = 0
+
+  testmode!(black_net)
+  testmode!(white_net)
+
+  black = MCTSPlayer(black_net, two_player_mode = true)
+  white = MCTSPlayer(white_net, two_player_mode = true)
+
+  for i = 1:num_games
+    num_move = 0  # The move number of the current game
+
+    initialize_game!(black)
+    initialize_game!(white)
+
+    while true
+      active = num_move % 2 == true ? white : black
+      inactive = num_move % 2 == true? black : white
+
+      current_readouts = N(active.root)
+      for sim = 1:num_sims
+        tree_search!(active)
+      end
+
+      # First, check the roots for hopeless games.
+      if should_resign(active)  # Force resign
+        set_result!(active, -active.root.position.to_play, true)
+        set_result!(inactive, active.root.position.to_play, true)
+      end
+      if is_done(active) break end
+
+      move = pick_move(active)
+      play_move!(active, move)
+      play_move!(inactive, move)
+      num_move += 1
+    end
+    games_won += black.result_string[1] == "B"
+  end
+
+  testmode!(black_net, false)
+  testmode!(white_net, false)
+
+  return games_won / num_games ≥ 0.55
 end

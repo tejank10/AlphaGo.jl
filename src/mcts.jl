@@ -4,10 +4,7 @@ Reference: Python version of the implementation of MCTS by
 (https://github.com/tensorflow/minigo)
 =#
 
-# REQUIREMENTS: include(go.jl)
-# RUN `set_mcts_params()` once you include mcts.jl
-
-using DataStructures
+using DataStructures: DefaultDict
 using Distributions: Dirichlet
 
 # Exploration constant balancing priors vs. value net output
@@ -32,10 +29,10 @@ mutable struct DummyNode
   otherwise have no parent node. If all nodes have parents, code becomes
   simpler. =#
   parent::Void
-  child_N::DefaultDict{Any, Any, Float64}
-  child_W::DefaultDict{Any, Any, Float64}
+  child_N::DefaultDict{Any, Float32, Float32}
+  child_W::DefaultDict{Any, Float32, Float32}
   function DummyNode()
-    new(nothing, DefaultDict(0., Dict()), DefaultDict(0., Dict()))
+    new(nothing, DefaultDict{Any, Float32}(0.0f0), DefaultDict{Any, Float32}(0.0f0))
   end
 end
 
@@ -118,7 +115,7 @@ function select_leaf(mcts_node::MCTSNode)
     if (length(current.position.recent) != 0
       && current.position.recent[end].move == nothing
       && current.child_N[pass_move] == 0)
-      current = maybe_add_child!(first_pass, pass_move)
+      current = maybe_add_child!(current, pass_move)
       continue
 		end
     best_move = findmax(child_action_score(current))[2]
@@ -229,8 +226,10 @@ function children_as_π(mcts_node::MCTSNode, squash::Bool = false)
   hopefully to move away from 3-3s
   =#
   probs = mcts_node.child_N
-  if squash probs = probs .^ 0.98 end
-  return probs / sum(probs)
+  if squash
+    probs = probs .^ 0.98
+  end
+  return probs ./ sum(probs)
 end
 
 function most_visited_path_nodes(mcts_node::MCTSNode)
@@ -248,7 +247,7 @@ end
 function most_visited_path(mcts_node::MCTSNode)
   node = mcts_node
   output = Array{String, 1}()
-  while !isemtpy(node.children)
+  while !isempty(node.children)
     next_kid = findmax(node.child_N)[2]
     node = get(node.children, next_kid, nothing)
     if node == nothing

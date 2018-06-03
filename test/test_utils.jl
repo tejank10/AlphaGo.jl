@@ -71,3 +71,13 @@ function assertEqualPositions(pos1, pos2)
   end
   @assert pos1.to_play == pos2.to_play
 end
+
+function assertNoPendingVirtualLosses(root)
+  # Raise an error if any node in this subtree has vlosses pending.
+  queue = [root]
+  while !isempty(queue)
+    current = pop!(queue)
+    @assert current.losses_applied == 0
+    queue = vcat(queue, collect(values(current.children)))
+  end
+end
