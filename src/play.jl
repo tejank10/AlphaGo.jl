@@ -3,24 +3,54 @@ using AlphaGo
 
 set_all_params(5)
 
-prev_nn = NeuralNet(tower_height = 0)
-cur_nn = deepcopy(prev_nn)
-player = MCTSPlayer(cur_nn)
+cur_nn = NeuralNet(; tower_height = 0)
+prev_nn = deepcopy(cur_nn)
 
-for i = 1:5
-  initialize_game!(player)
-  while !is_done(player)
-    tree_search!(player)
-    play_move!(player, pick_move(player))
-  end
-  set_result!(player, result(player.root.position), false)
-  in_data = extract_data(player)
-  train!(cur_nn, in_data)
-  cur_is_best = evaluate(cur_nn, prev_nn; num_games = 5, num_sims = 8)
+NUM_GAMES = 15
 
-  if cur_is_best
-    prev_nn = deepcopy(cur_nn)
-  else
-    cur_nn = deepcopy(prev_nn)
+MEM_SIZE = 10000
+BATCH_SIZE = 32
+EVAL_FREQ = 5
+
+pos_buffer = Vector{AlphaGo.go.Position}()
+π_buffer = Vector{Vector{Float32}}()
+res_buffer = Vector{Int}()
+
+function get_replay_batch(pos_buffer, π_buffer, res_buffer)
+  idxs = rand(1:length(pos_buffer), BATCH_SIZE)
+  pos_replay = pos_buffer[idxs]
+  π_replay = hcat(π_buffer[idxs]...)
+  res_replay = res_buffer[idxs]
+
+  pos_replay, π_replay, res_replay
+end
+
+for i = 1:NUM_GAMES
+  player = selfplay(cur_nn)
+  p, π, v = extract_data(player)
+
+  pos_buffer = vcat(pos_buffer, p)
+  π_buffer = vcat(π_buffer, π)
+  res_buffer = vcat(res_buffer, v)
+
+  if length(pos_buffer) > MEM_SIZE
+    pos_buffer = pos_buffer[end-MEM_SIZE+1:end]
+    π_buffer = π_buffer[end-MEM_SIZE+1:end]
+    res_buffer = res_buffer[end-MEM_SIZE+1:end]
   end
+
+  replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
+  train!(cur_nn, (replay_pos, replay_π, replay_res))
+
+  print("Episode $i over. ")
+  if i % EVAL_FREQ == 0
+    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 5)
+    if cur_is_winner
+      prev_nn = deepcopy(cur_nn)
+    else
+      cur_nn = deepcopy(prev_nn)
+    end
+    print("Evaluated")
+  end
+  println()
 end

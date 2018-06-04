@@ -13,11 +13,9 @@ mutable struct MCTSPlayer
   resign_threshold
   position
 
-  function MCTSPlayer(network; num_readouts = 0, two_player_mode = false,
-               resign_threshold = nothing)
-    num_readouts = num_readouts == nothing ? 800 : num_readouts
+  function MCTSPlayer(network; num_readouts = 800, two_player_mode = false,
+               resign_threshold = -0.9)
     τ_threshold = two_player_mode ? -1 : (go.N * go.N ÷ 12) ÷ 2 * 2
-    resign_threshold = resign_threshold == nothing ? -0.9 : resign_threshold
     new(network, num_readouts, two_player_mode, τ_threshold,
         Array{Float32, 1}(), Array{Array{Float32, 1}, 1}(), 0, "",
         nothing, resign_threshold, nothing)
@@ -119,7 +117,7 @@ function extract_data(mcts_player::MCTSPlayer)
   @assert length(mcts_player.searches_π) == mcts_player.root.position.n
   @assert mcts_player.result != 0
   positions = Vector{go.Position}()
-  πs = hcat(mcts_player.searches_π...)
+  πs = deepcopy(mcts_player.searches_π)
   results = Vector{Int}()
 
   pwcs = go.replay_position(mcts_player.root.position, mcts_player.result)

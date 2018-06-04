@@ -285,8 +285,8 @@ function test_extract_data_normal_end()
   set_result!(player, go.result(player.root.position), false)
 
   positions, πs, results = extract_data(player)
-  @test length(positions) == size(πs, 2) == length(results) == 2
-  position, pi, result = positions[1], πs[:, 1], results[1]
+  @test length(positions) == length(πs) == length(results) == 2
+  position, pi, result = positions[1], πs[1], results[1]
   # White wins by komi
   @test result == go.WHITE
   @test player.result_string == "W+$(player.root.position.komi)"

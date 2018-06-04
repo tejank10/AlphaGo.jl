@@ -1,4 +1,5 @@
 import Flux.testmode!
+import Base.deepcopy
 
 include("resnet.jl")
 #TODO: gpu
@@ -7,9 +8,8 @@ mutable struct NeuralNet
   value::Chain
   policy::Chain
   opt
-  c::Float32
-  function NeuralNet(; base_net = nothing, value = nothing, policy = nothing,
-                          tower_height::Int = 19, c::Float32 = 1e-4)
+  function NeuralNet(;base_net = nothing, value = nothing, policy = nothing,
+                          tower_height::Int = 19)
     if base_net == nothing
       res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
@@ -26,9 +26,9 @@ mutable struct NeuralNet
                       Dense(2go.N*go.N, go.N*go.N+1))
     end
 
-    all_params = cat(1, params(base_net), params(value), params(policy))
+    all_params = vcat(params(base_net), params(value), params(policy))
     opt = ADAM(all_params)
-    new(base_net, value, policy, opt, c)
+    new(base_net, value, policy, opt)
   end
 end
 
@@ -36,7 +36,7 @@ function deepcopy(nn::NeuralNet)
   base_net = deepcopy(nn.base_net)
   value = deepcopy(nn.value)
   policy = deepcopy(nn.policy)
-  return NeuralNet(base_net, value, policy)
+  return NeuralNet(; base_net = base_net, value = value, policy = policy)
 end
 
 function testmode!(nn::NeuralNet, val::Bool=true)
@@ -56,13 +56,16 @@ function (nn::NeuralNet)(input::Vector{go.Position})
   return π, val
 end
 
-(nn::NeuralNet)(input::go.Position) = nn([input])
+function (nn::NeuralNet)(input::go.Position)
+  p, v = nn([input])
+  return p[:, 1], v[1]
+end
 
-loss_π(π, p) = crossentropy(softmax(π), p)
+loss_π(π, p) = 0.01f0 * crossentropy(softmax(π), p)
 
-loss_value(z, v) = mse(z, v)
+loss_value(z, v) = 0.01f0 * mse(z, v)
 
-loss_reg(nn::NeuralNet) = nn.c * (sum(vecnorm, params(nn.base_net)) +
+loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
                            sum(vecnorm, params(nn.value)) +
                            sum(vecnorm, params(nn.policy)))
 
@@ -74,8 +77,7 @@ function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Flo
   nn.opt()
 end
 
-function evaluate(black_net::NeuralNet, white_net::NeuralNet;
-  num_games = 400, num_sims = 1600)
+function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400)
   games_won = 0
 
   testmode!(black_net)
@@ -95,7 +97,9 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet;
       inactive = num_move % 2 == true? black : white
 
       current_readouts = N(active.root)
-      for sim = 1:num_sims
+      readouts = active.num_readouts
+
+      while N(active.root) < current_readouts + readouts
         tree_search!(active)
       end
 
