@@ -70,6 +70,7 @@ function assertEqualPositions(pos1, pos2)
     @assert pos1.recent[end - r_len + 1:end] == pos2.recent[end - r_len + 1:end]
   end
   @assert pos1.to_play == pos2.to_play
+  return true
 end
 
 function assertNoPendingVirtualLosses(root)
@@ -80,4 +81,5 @@ function assertNoPendingVirtualLosses(root)
     @assert current.losses_applied == 0
     queue = vcat(queue, collect(values(current.children)))
   end
+  return true
 end
