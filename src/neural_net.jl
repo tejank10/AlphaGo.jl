@@ -75,6 +75,7 @@ function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Flo
   loss = loss_π(π, p) + loss_value(z, v) + loss_reg(nn)
   back!(loss)
   nn.opt()
+  return loss.tracker.data
 end
 
 function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400)

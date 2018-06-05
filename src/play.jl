@@ -1,15 +1,15 @@
 using AlphaGo
 
-set_all_params(5)
+set_all_params(9)
 
-cur_nn = NeuralNet(; tower_height = 0)
+cur_nn = NeuralNet(; tower_height = 10)
 prev_nn = deepcopy(cur_nn)
 
-NUM_GAMES = 15
+NUM_GAMES = 5000
 
-MEM_SIZE = 10000
+MEM_SIZE = 100000
 BATCH_SIZE = 32
-EVAL_FREQ = 5
+EVAL_FREQ = 500
 
 pos_buffer = Vector{AlphaGo.go.Position}()
 π_buffer = Vector{Vector{Float32}}()
@@ -39,11 +39,11 @@ for i = 1:NUM_GAMES
   end
 
   replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
-  train!(cur_nn, (replay_pos, replay_π, replay_res))
+  loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
 
-  print("Episode $i over. ")
+  print("Episode $i over. Loss: $loss")
   if i % EVAL_FREQ == 0
-    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 5)
+    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 200)
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
     else
