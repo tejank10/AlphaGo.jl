@@ -174,16 +174,14 @@ end
     tree_search!(player, 1)
     # virtual losses should enable multiple searches to happen simultaneously
     # without throwing an error...
-    for i = 1:5
-      tree_search!(player, 4)
+    for i = 1:6
+      tree_search!(player, 5)
     end
     # uncomment to debug this test
     # print(player.root.describe())
 
     # Search should converge on D9 as only winning move.
     flattened = go.to_flat(go.from_kgs("D9"))
-    println(player.root.position)
-    print(player.root.child_N)
     best_moves = find(x -> x .== maximum(player.root.child_N), player.root.child_N)
     @test flattened ∈ best_moves
     # D9 should have a positive value
