@@ -1,4 +1,3 @@
-include("AlphaGo.jl")
 using AlphaGo
 
 set_all_params(5)
