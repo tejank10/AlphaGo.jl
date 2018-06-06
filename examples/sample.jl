@@ -5,11 +5,11 @@ set_all_params(6)
 cur_nn = NeuralNet(; tower_height = 1)
 prev_nn = deepcopy(cur_nn)
 
-NUM_GAMES = 15
+NUM_GAMES = 32
 
 MEM_SIZE = 50000
 BATCH_SIZE = 32
-EVAL_FREQ = 2
+EVAL_FREQ = 4
 
 pos_buffer = Vector{AlphaGo.go.Position}()
 π_buffer = Vector{Vector{Float32}}()
@@ -25,7 +25,7 @@ function get_replay_batch(pos_buffer, π_buffer, res_buffer)
 end
 
 for i = 1:NUM_GAMES
-  player = selfplay(cur_nn)
+  player = selfplay(cur_nn, 64)
   p, π, v = extract_data(player)
 
   pos_buffer = vcat(pos_buffer, p)
@@ -53,4 +53,3 @@ for i = 1:NUM_GAMES
   end
   println()
 end
-
