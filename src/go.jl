@@ -33,7 +33,7 @@ end
 
 function make_env(n::Int)
   set_board_size(n)
-  return env(Position(), n * n + 1, n * n)
+  return env(Position())
 end
 
 end
