@@ -15,15 +15,15 @@ mutable struct NeuralNet
       # 19 residual blocks
       tower = tuple(repmat([res_block], tower_height)...)
       base_net = Chain(Conv((3,3), 17=>256, pad=(1,1)), BatchNorm(256, relu),
-                        tower...)
+                        tower...) |> gpu
     end
     if value == nothing
       value = Chain(Conv((1,1), 256=>1), BatchNorm(1, relu), x->reshape(x, :, size(x, 4)),
-                    Dense(go.N*go.N, 256, relu), Dense(256, 1, tanh))
+                    Dense(go.N*go.N, 256, relu), Dense(256, 1, tanh)) |> gpu
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2go.N*go.N, go.N*go.N+1))
+                      Dense(2go.N*go.N, go.N*go.N+1)) |> gpu
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
@@ -46,7 +46,7 @@ function testmode!(nn::NeuralNet, val::Bool=true)
 end
 
 function (nn::NeuralNet)(input::Vector{go.Position})
-  nn_in = cat(4, get_feats.(input)...)
+  nn_in = cat(4, get_feats.(input)...) |> gpu
   testmode!(nn)
 
   common_out = nn.base_net(nn_in)
@@ -57,7 +57,7 @@ function (nn::NeuralNet)(input::Vector{go.Position})
 end
 
 function (nn::NeuralNet)(input::go.Position)
-  p, v = nn([input])
+  p, v = nn(cu([input]))
   return p[:, 1], v[1]
 end
 
@@ -70,7 +70,7 @@ loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
                            sum(vecnorm, params(nn.policy)))
 
 function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}})
-  positions, π, z = input_data
+  positions, π, z = input_data |> gpu
   p, v = nn(positions)
   loss = loss_π(π, p) + loss_value(z, v) + loss_reg(nn)
   back!(loss)

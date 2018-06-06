@@ -1,4 +1,4 @@
-using AlphaGo
+using AlphaGo, CuArrays
 
 set_all_params(9)
 
