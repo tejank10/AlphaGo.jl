@@ -79,7 +79,7 @@ function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)
     push!(leaves, leaf)
   end
   if !isempty(leaves)
-    move_probs, values = mcts_player.network(cu([leaf.position for leaf in leaves]))
+    move_probs, values = mcts_player.network([leaf.position for leaf in leaves])
     move_probs, values = move_probs.tracker.data, values.tracker.data
     move_probs = [move_probs[:, i] for i = 1:size(move_probs, 2)]
     for (leaf, move_prob, value) in zip(leaves, move_probs, values)

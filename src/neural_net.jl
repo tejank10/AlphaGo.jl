@@ -57,7 +57,7 @@ function (nn::NeuralNet)(input::Vector{go.Position})
 end
 
 function (nn::NeuralNet)(input::go.Position)
-  p, v = nn(cu([input]))
+  p, v = nn([input])
   return p[:, 1], v[1]
 end
 
