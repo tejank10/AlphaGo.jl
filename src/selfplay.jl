@@ -1,4 +1,4 @@
-function selfplay(nn::NeuralNet)
+function selfplay(nn::NeuralNet, num_ro::Int = 800)
   #= Plays out a self-play match, returning
   - the final position
   - the n x go.N² tensor of floats representing the mcts search probabilities
@@ -12,7 +12,7 @@ function selfplay(nn::NeuralNet)
     resign_threshold = -0.9
   end
 
-  player = MCTSPlayer(nn, resign_threshold = resign_threshold)
+  player = MCTSPlayer(nn, num_readouts = num_ro, resign_threshold = resign_threshold)
 
   readouts = player.num_readouts
   initialize_game!(player)
