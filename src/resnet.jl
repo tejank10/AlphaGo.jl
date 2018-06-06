@@ -12,8 +12,8 @@ function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tupl
     local conv_layers = []
     local norm_layers = []
     for i in 2:length(filters)
-        push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
-        push!(norm_layers, BatchNorm(filters[i]))
+        push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1])|>gpu)
+        push!(norm_layers, BatchNorm(filters[i])|>gpu)
     end
     ResidualBlock(Tuple(conv_layers),Tuple(norm_layers),shortcut)
 end
