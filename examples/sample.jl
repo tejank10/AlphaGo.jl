@@ -43,7 +43,7 @@ for i = 1:NUM_GAMES
 
   print("Episode $i over. Loss: $loss")
   if i % EVAL_FREQ == 0
-    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 200)
+    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 3, ro = 64)
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
     else
