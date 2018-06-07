@@ -99,9 +99,9 @@ for i = 1:NUM_GAMES
     print(" Evaluated.")
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
-      @save "agz_$(i)_base.bson" cur_nn.base_net
-      @save "agz_$(i)_value.bson" cur_nn.value
-      @save "agz_$(i)_policy.bson" cur_nn.policy
+      @save "agz_$(i)_base.bson" Tracker.data.(params(cur_nn.base_net))
+      @save "agz_$(i)_value.bson" Tracker.data.(params(cur_nn.value))
+      @save "agz_$(i)_policy.bson" Tracker.data.(params(cur_nn.policy))
       print(" Model updated")
     else
       cur_nn = deepcopy(prev_nn)
