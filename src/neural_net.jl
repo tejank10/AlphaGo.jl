@@ -73,20 +73,20 @@ function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Flo
   positions = input_data[1]
   π, z = input_data[2:3] |> gpu
   p, v = nn(positions)
-  loss = loss_π(π, p) + loss_value(z, v) + loss_reg(nn)
+  loss = loss_π(π, p) + loss_value(z, v) #+ loss_reg(nn)
   back!(loss)
   nn.opt()
   return loss.tracker.data
 end
 
-function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400)
+function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, ro = 800)
   games_won = 0
 
   testmode!(black_net)
   testmode!(white_net)
 
-  black = MCTSPlayer(black_net, two_player_mode = true)
-  white = MCTSPlayer(white_net, two_player_mode = true)
+  black = MCTSPlayer(black_net, num_readouts = ro, two_player_mode = true)
+  white = MCTSPlayer(white_net, num_readouts = ro, two_player_mode = true)
 
   for i = 1:num_games
     num_move = 0  # The move number of the current game
