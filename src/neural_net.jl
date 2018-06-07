@@ -70,7 +70,8 @@ loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
                            sum(vecnorm, params(nn.policy)))
 
 function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}})
-  positions, π, z = input_data  |> gpu
+  positions = input_data[1]
+  π, z = input_data[2:3] |> gpu
   p, v = nn(positions)
   loss = loss_π(π, p) + loss_value(z, v) + loss_reg(nn)
   back!(loss)
