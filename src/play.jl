@@ -1,15 +1,67 @@
 using AlphaGo, CuArrays
+using BSON: @load, @save
 
-set_all_params(9)
+CL_FLAGS = ["-brd_sz", "-twr_ht", "-mem_sz", "-num_games", "-batch_sz", "-eval_frq", "-ro", "-eval_games"]
 
-cur_nn = NeuralNet(; tower_height = 10)
+BOARD_SIZE = 19
+TOWER_HEIGHT = 19
+NUM_GAMES = 25000
+MEM_SIZE = 500000
+BATCH_SIZE = 2048
+EVAL_FREQ = 1000
+READOUTS = 800
+EVAL_GAMES = 400
+
+function parse_args()
+  global BOARD_SIZE, TOWER_HEIGHT, NUM_GAMES, MEM_SIZE, BATCH_SIZE, EVAL_FREQ,
+          READOUTS, EVAL_GAMES
+  ix = findfirst(x->x=="-brd_sz", ARGS)
+  if ix != 0
+    BOARD_SIZE = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-twr_ht", ARGS)
+  if ix != 0
+    TOWER_HEIGHT = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-num_games", ARGS)
+  if ix != 0
+    NUM_GAMES = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-mem_sz", ARGS)
+  if ix != 0
+    MEM_SIZE = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-batch_sz", ARGS)
+  if ix != 0
+    BATCH_SIZE = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-eval_frq", ARGS)
+  if ix != 0
+    EVAL_FREQ = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-ro", ARGS)
+  if ix != 0
+    READOUTS = parse(Int, ARGS[ix + 1])
+  end
+
+  ix = findfirst(x->x=="-eval_games", ARGS)
+  if ix != 0
+    EVAL_GAMES = parse(Int, ARGS[ix + 1])
+  end
+end
+
+parse_args()
+
+set_all_params(BOARD_SIZE)
+
+cur_nn = NeuralNet(; tower_height = TOWER_HEIGHT)
 prev_nn = deepcopy(cur_nn)
-
-NUM_GAMES = 5000
-
-MEM_SIZE = 100000
-BATCH_SIZE = 32
-EVAL_FREQ = 500
 
 pos_buffer = Vector{AlphaGo.go.Position}()
 π_buffer = Vector{Vector{Float32}}()
@@ -25,7 +77,7 @@ function get_replay_batch(pos_buffer, π_buffer, res_buffer)
 end
 
 for i = 1:NUM_GAMES
-  player = selfplay(cur_nn)
+  player = selfplay(cur_nn, READOUTS)
   p, π, v = extract_data(player)
 
   pos_buffer = vcat(pos_buffer, p)
@@ -41,15 +93,20 @@ for i = 1:NUM_GAMES
   replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
   loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
 
-  print("Episode $i over. Loss: $loss")
+  print("Episode $i over. Loss: $loss ")
   if i % EVAL_FREQ == 0
-    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = 200)
+    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = EVAL_GAMES, ro = READOUTS)
+    print(" Evaluated.")
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
+      @save "agz_$(i)_base.bson" cur_nn.base_net
+      @save "agz_$(i)_value.bson" cur_nn.value
+      @save "agz_$(i)_policy.bson" cur_nn.policy
+      print(" Model updated")
     else
       cur_nn = deepcopy(prev_nn)
+      print(" Model retained")
     end
-    print("Evaluated")
   end
   println()
 end
