@@ -77,10 +77,10 @@ mutable struct MCTSNode
   end
 end
 
-illegal_moves(x::MCTSNode) = 1000 * (1 - go.all_legal_moves(x.position))
+legal_moves(x::MCTSNode) = go.all_legal_moves(x.position)
 
 child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
-                                            child_U(x) .- illegal_moves(x)
+                                            child_U(x)
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 + x.child_N)
 
@@ -118,7 +118,10 @@ function select_leaf(mcts_node::MCTSNode)
       current = maybe_add_child!(current, pass_move)
       continue
 		end
-    best_move = findmax(child_action_score(current))[2]
+    mask = Bool.(legal_moves(current))
+    cas = child_action_score(current)
+    max_score = maximum(cas[mask])
+    best_move = findfirst(x -> x == max_score, cas)
     current = maybe_add_child!(current, best_move)
 	end
   return current

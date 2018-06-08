@@ -472,7 +472,7 @@ function play_move!(pos::Position, c; color = nothing, mutate = false)
     return new_pos
   end
 
-  if !is_move_legal(pos, c)
+  if !is_move_legal(pos, c) 
     throw(IllegalMove())
   end
 
