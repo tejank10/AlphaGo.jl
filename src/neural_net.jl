@@ -61,7 +61,7 @@ function (nn::NeuralNet)(input::go.Position)
   return p[:, 1], v[1]
 end
 
-loss_π(π, p) = crossentropy(softmax(p), π, 0.01f0)
+loss_π(π, p) = crossentropy(softmax(p), π; weight = 0.01f0)
 
 loss_value(z, v) = 0.01f0 * mse(z, v)
 
@@ -107,9 +107,8 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 
       # First, check the roots for hopeless games.
       if should_resign(active)  # Force resign
-        println(active.root.position.to_play == inactive.root.position.to_play)
-        set_result!(active, -active.root.position.to_play, true)
-        set_result!(inactive, active.root.position.to_play, true)
+        set_result!(active, inctive.root.position.to_play, true)
+        set_result!(inactive, inactive.root.position.to_play, true)
       end
       if is_done(active)
         set_result!(active, 0, false)
@@ -127,6 +126,6 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 
   testmode!(black_net, false)
   testmode!(white_net, false)
-
+  print("Won $games_won / $num_games. Win rate $(games_won/num_games). ")
   return games_won / num_games ≥ 0.55
 end
