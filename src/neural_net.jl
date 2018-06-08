@@ -61,7 +61,7 @@ function (nn::NeuralNet)(input::go.Position)
   return p[:, 1], v[1]
 end
 
-loss_π(π, p) = 0.01f0 * crossentropy(softmax(π), p)
+loss_π(π, p) = crossentropy(softmax(p), π, 0.01f0)
 
 loss_value(z, v) = 0.01f0 * mse(z, v)
 
