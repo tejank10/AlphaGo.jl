@@ -107,17 +107,22 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 
       # First, check the roots for hopeless games.
       if should_resign(active)  # Force resign
+        println(active.root.position.to_play == inactive.root.position.to_play)
         set_result!(active, -active.root.position.to_play, true)
         set_result!(inactive, active.root.position.to_play, true)
       end
-      if is_done(active) break end
+      if is_done(active)
+        set_result!(active, 0, false)
+        set_result!(inactive, 0, false)
+        break
+      end
 
       move = pick_move(active)
       play_move!(active, move)
       play_move!(inactive, move)
       num_move += 1
     end
-    games_won += black.result_string[1] == "B"
+    games_won += black.result == go.BLACK
   end
 
   testmode!(black_net, false)

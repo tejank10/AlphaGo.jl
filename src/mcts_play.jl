@@ -96,6 +96,8 @@ function set_result!(mcts_player::MCTSPlayer, winner, was_resign)
     string = winner == go.BLACK ? "B+R" : "W+R"
   else
     string = go.result_string(mcts_player.root.position)
+    mcts_player.result = string[1] == 'B' ? go.BLACK :
+                                              (string[1] == 'W' ? go.WHITE : 0)
   end
   mcts_player.result_string = string
 end
