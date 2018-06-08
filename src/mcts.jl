@@ -80,7 +80,7 @@ end
 illegal_moves(x::MCTSNode) = 1000 * (1 - go.all_legal_moves(x.position))
 
 child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
-                                            child_U(x) .- illegal_moves()
+                                            child_U(x) .- illegal_moves(x)
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 + x.child_N)
 
