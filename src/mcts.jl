@@ -54,7 +54,6 @@ mutable struct MCTSNode
   position::go.Position
   is_expanded::Bool
   losses_applied::Int
-  illegal_moves::Array{Int, 1}
   child_N::Array{Float32, 1}
   child_W::Array{Float32, 1}
   original_prior::Array{Float32, 1}
@@ -67,7 +66,6 @@ mutable struct MCTSNode
     end
     is_expanded = false
     losses_applied = 0  # number of virtual losses on this node
-    illegal_moves = 1000 * (1 - go.all_legal_moves(position))
     child_N = zeros(Float32, go.N * go.N + 1)
     child_W = zeros(Float32, go.N * go.N + 1)
     # save a copy of the original prior before it gets mutated by d-noise.
@@ -79,8 +77,10 @@ mutable struct MCTSNode
   end
 end
 
-child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play +
-                                            child_U(x) - x.illegal_moves
+illegal_moves(x::MCTSNode) = 1000 * (1 - go.all_legal_moves(x.position))
+
+child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
+                                            child_U(x) .- illegal_moves()
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 + x.child_N)
 
