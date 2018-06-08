@@ -72,7 +72,7 @@ mutable struct MCTSNode
     original_prior = zeros(Float32, go.N * go.N + 1)
     child_prior = zeros(Float32, go.N * go.N + 1)
     children = Dict()  # map of flattened moves to resulting MCTSNode
-    new(parent, fmove, position, is_expanded, losses_applied, illegal_moves,
+    new(parent, fmove, position, is_expanded, losses_applied,
     child_N, child_W, original_prior, child_prior, children)
   end
 end
