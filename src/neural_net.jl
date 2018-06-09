@@ -107,7 +107,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 
       # First, check the roots for hopeless games.
       if should_resign(active)  # Force resign
-        set_result!(active, inctive.root.position.to_play, true)
+        set_result!(active, inactive.root.position.to_play, true)
         set_result!(inactive, inactive.root.position.to_play, true)
       end
       if is_done(active)

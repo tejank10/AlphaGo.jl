@@ -121,7 +121,10 @@ function select_leaf(mcts_node::MCTSNode)
     mask = Bool.(legal_moves(current))
     cas = child_action_score(current)
     max_score = maximum(cas[mask])
-    best_move = (find(x -> x == max_score, cas) ∩ find(x -> x == true, mask))[1]
+    if any(isnan.(cas))
+      println(cas)
+    end
+    best_move = find(x -> x == max_score, cas)[1]
     current = maybe_add_child!(current, best_move)
 	end
   return current
