@@ -94,7 +94,7 @@ set_N!(x::MCTSNode, value) = x.parent.child_N[x.fmove] = value
 N(x::MCTSNode) = get_N(x)
 
 get_W(x::MCTSNode) = x.parent.child_W[x.fmove]
-set_W!(x::MCTSNode, value) = x.parent.child_W[x.fmove] = value
+set_W!(x::MCTSNode, value) = !isnan(value)?x.parent.child_W[x.fmove] = value:println("nan")
 W(x::MCTSNode) = get_W(x)
 
 # Return value of position, from perspective of player to play
@@ -121,10 +121,7 @@ function select_leaf(mcts_node::MCTSNode)
     mask = Bool.(legal_moves(current))
     cas = child_action_score(current)
     max_score = maximum(cas[mask])
-    if any(isnan.(cas))
-      println(cas)
-    end
-    best_move = find(x -> x == max_score, cas)[1]
+    best_move = intersect(find(x -> x == max_score, cas), find(x->x==true, mask))[1]
     current = maybe_add_child!(current, best_move)
 	end
   return current

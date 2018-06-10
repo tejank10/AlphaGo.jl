@@ -99,10 +99,10 @@ for i = 1:NUM_GAMES
     print(" Evaluated.")
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
-      bn,value, policy = cur.base_net, cur.base_net, cur.policy
-      @save "agz_$(i)_base.bson" bn
-      @save "agz_$(i)_value.bson" value
-      @save "agz_$(i)_policy.bson" policy
+      bn,value, policy = cur_nn.base_net, cur_nn.base_net, cur_nn.policy
+      @save "../models/agz_$(i)_base.bson" bn
+      @save "../models/agz_$(i)_value.bson" value
+      @save "../models/agz_$(i)_policy.bson" policy
       print(" Model updated")
     else
       cur_nn = deepcopy(prev_nn)
