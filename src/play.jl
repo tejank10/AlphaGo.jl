@@ -1,4 +1,4 @@
-using AlphaGo, CuArrays
+using AlphaGo
 using BSON: @load, @save
 
 CL_FLAGS = ["-brd_sz", "-twr_ht", "-mem_sz", "-num_games", "-batch_sz", "-eval_frq", "-ro", "-eval_games"]
