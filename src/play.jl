@@ -1,7 +1,8 @@
 using BSON: @load
 using AlphaGo
 using AlphaGo:N, go
-using Flux, CuArrays
+using Flux
+# CuArrays
 
 set_all_params(9)
 
@@ -21,7 +22,8 @@ bn = mapleaves(cu, bn)
 value = mapleaves(cu, value)
 policy = mapleaves(cu, policy)
 
-agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
+# agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
+agz_nn = NeuralNet(;tower_height=1)
 agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
 
 initialize_game!(agz)
@@ -32,7 +34,7 @@ while !is_done(agz)
 
   if num_moves % 2 == 0
     print("Your turn: ")
-    move = readline(STDIN)
+    move = input(STDIN)
     move = go.from_kgs(move)
   else
     print("AGZ's turn: ")

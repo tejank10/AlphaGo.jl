@@ -29,21 +29,29 @@ function __init__(){
   }
 
   function update(env){
-      board.addObject(env.action)
-      setTimeout(() => board.restoreState(env.state), 500);
+      console.log("update: " + env.action.x + " " + env.action.y + " " + env.action.c)
+      if(env.action != "pass"){
+          var action = Object.assign({}, env.action,{"type": "NORMAL"})
+          board.addObject(action)
+          setTimeout(() => board.restoreState(env.state), 500);
+      }
   }
 
   function showMsg(msg){
 
       $$("#msg").innerText = msg.toString();
-      show($$("msg"))
-      setTimeout(()=>hide($$("msg")), 3000)
+      show($$("#msg"))
+      setTimeout(()=>hide($$("#msg")), 3000)
   }
 
   game = Object.assign(game, {
     setBoardSize,
     update,
     showMsg
+  })
+
+  $$("#controls .pass").addEventListener("click", function (e){
+      game.action({x: -1, y: -1});
   })
 
 
@@ -95,4 +103,5 @@ function __init__(){
     		ele.className += " hidden";
     	}
     }
+
 }
