@@ -15,6 +15,7 @@ assets = "$(@__DIR__)/assets"
 
 files=[
     "$(assets)/css/style.css"
+    "$(assets)/css/wgo.player.css"
     "$(assets)/js/wgo.min.js"
     "$(assets)/js/script.js"]
 
@@ -141,7 +142,7 @@ colorDict = Dict(1=>"BLACK",-1=>"WHITE")
 
 function isIllegalMove(x)
     AlphaGo.get_position(controller["model"]) == nothing && return true
-    !AlphaGo.go.is_move_legal(controller["model"].position, colorDict[x["c"]])
+    !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), actionToString(x), colorDict[x["c"]])
 end
 
 startGame()
