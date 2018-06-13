@@ -1,4 +1,4 @@
-using AlphaGo, CuArrays
+using AlphaGo, CuArrays, Flux
 using BSON: @load, @save
 
 CL_FLAGS = ["-brd_sz", "-twr_ht", "-mem_sz", "-num_games", "-batch_sz", "-eval_frq", "-ro", "-eval_games"]
@@ -99,10 +99,19 @@ for i = 1:NUM_GAMES
     print(" Evaluated.")
     if cur_is_winner
       prev_nn = deepcopy(cur_nn)
-      bn,value, policy = cur_nn.base_net, cur_nn.base_net, cur_nn.policy
+      bn,value, policy = cpu.((cur_nn.base_net, cur_nn.value, cur_nn.policy))
       @save "../models/agz_$(i)_base.bson" bn
       @save "../models/agz_$(i)_value.bson" value
       @save "../models/agz_$(i)_policy.bson" policy
+
+      # saving weights
+      bn_weights = cpu.(Tracker.data.(params(bn)))
+      val_weights = cpu.(Tracker.data.(params(value)))
+      pol_weights = cpu.(Tracker.data.(params(policy)))
+
+      @save "../models/weights/agz_$(i)_base.bson" bn_weights
+      @save "../models/weights/agz_$(i)_value.bson" val_weights
+      @save "../models/weights/agz_$(i)_policy.bson" pol_weights
       print(" Model updated")
     else
       cur_nn = deepcopy(prev_nn)

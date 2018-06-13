@@ -94,7 +94,7 @@ set_N!(x::MCTSNode, value) = x.parent.child_N[x.fmove] = value
 N(x::MCTSNode) = get_N(x)
 
 get_W(x::MCTSNode) = x.parent.child_W[x.fmove]
-set_W!(x::MCTSNode, value) = !isnan(value)?x.parent.child_W[x.fmove] = value:println("nan")
+set_W!(x::MCTSNode, value) = x.parent.child_W[x.fmove] = value
 W(x::MCTSNode) = get_W(x)
 
 # Return value of position, from perspective of player to play
@@ -193,7 +193,7 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   # Conversely, if W is winning, then B will explore all go.N² + 1 moves before
   # continuing to explore the most favorable move. This is a waste of search.
   #
-  # The value seeded here acts as a prior, and gets averaged into Q calculations.
+  # The value seeded here acts as a prior, and gets averaged into Q calculations
   mcts_node.child_W = ones(Float32, go.N * go.N + 1) * value
   backup_value!(mcts_node, value, up_to)
 end
