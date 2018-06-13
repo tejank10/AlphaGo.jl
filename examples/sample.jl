@@ -1,4 +1,4 @@
-using AlphaGo, CuArrays
+using AlphaGo
 
 set_all_params(6)
 
@@ -25,7 +25,7 @@ function get_replay_batch(pos_buffer, π_buffer, res_buffer)
 end
 
 for i = 1:NUM_GAMES
-  player = selfplay(cur_nn, 64)
+  player = selfplay(cur_nn, 8)
   p, π, v = extract_data(player)
 
   pos_buffer = vcat(pos_buffer, p)
