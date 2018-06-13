@@ -142,7 +142,7 @@ colorDict = Dict(1=>"BLACK",-1=>"WHITE")
 
 function isIllegalMove(x)
     AlphaGo.get_position(controller["model"]) == nothing && return true
-    !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), actionToString(x), colorDict[x["c"]])
+    !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), actionToString(x))
 end
 
 startGame()
