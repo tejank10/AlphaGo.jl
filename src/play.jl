@@ -1,22 +1,41 @@
 using BSON: @load
 using AlphaGo
+using AlphaGo:N, go
+using Flux, CuArrays
 
-@load "agz_640_base" base
-@load "agz_640_value" value
-@load "agz_640_policy" policy
+set_all_params(9)
 
-agz_nn = NeuralNet(base, value, policy)
+@load "../models/agz_128_base.bson" bn
+@load "../models/agz_128_value.bson" value
+@load "../models/agz_128_policy.bson" policy
+
+@load "../models/weights/agz_128_base.bson" bn_weights
+@load "../models/weights/agz_128_value.bson" val_weights
+@load "../models/weights/agz_128_policy.bson" pol_weights
+
+Flux.loadparams!(bn,bn_weights)
+Flux.loadparams!(value, val_weights)
+Flux.loadparams!(policy, pol_weights)
+
+bn = mapleaves(cu, bn)
+value = mapleaves(cu, value)
+policy = mapleaves(cu, policy)
+
+agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
 agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
 
 initialize_game!(agz)
 num_moves = 0
 
 while !is_done(agz)
-  print(get_position(agz))
+  print(agz.root.position)
 
   if num_moves % 2 == 0
-    move = input("Your move: ")
+    print("Your turn: ")
+    move = readline(STDIN)
+    move = go.from_kgs(move)
   else
+    print("AGZ's turn: ")
     current_readouts = N(agz.root)
     readouts = agz.num_readouts
 
@@ -33,12 +52,13 @@ while !is_done(agz)
       break
     end
 
-    move = pick_move(active)
+    move = pick_move(agz)
+    println(go.to_kgs(move))
   end
 
-  play_move!(agz, move)
-  num_moves += 1
+  if play_move!(agz, move)
+    num_moves += 1
+  end
 end
 
-
-end
+println(agz.result_string)
