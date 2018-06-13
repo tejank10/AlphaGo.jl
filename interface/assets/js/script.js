@@ -30,11 +30,13 @@ function __init__(){
 
   function update(env){
       console.log("update: " + env.action.x + " " + env.action.y + " " + env.action.c)
-      if(env.action != "pass"){
+      if(env.action.x != -1 && env.action.y != -1 ){
           var action = Object.assign({}, env.action,{"type": "NORMAL"})
           board.addObject(action)
           setTimeout(() => board.restoreState(env.state), 500);
       }
+
+      // Array.from($$("#controls .options div")).forEach(e => toggleFade(e))
   }
 
   function showMsg(msg){
@@ -102,6 +104,18 @@ function __init__(){
     	if(ele.className.match("hidden") == null){
     		ele.className += " hidden";
     	}
+    }
+
+    function toggleFade(e){
+        return toggleClass(e, "fade")
+    }
+
+    function toggleClass(e, name){
+        if(ele.className.match(name) != null){
+            ele.className = ele.className.replace(name, "");
+        }else{
+            ele.className += " " + name;
+        }
     }
 
 }

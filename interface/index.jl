@@ -6,7 +6,7 @@ using AlphaGo
 using AlphaGo: go
 using WebIO
 using JSExpr
-using Blink
+
 
 controller = Dict()
 controller["playing"] = false
@@ -21,8 +21,11 @@ files=[
     "$(assets)/js/script.js"]
 
 w = Scope(imports=files)
+# for user action (js -> julia)
 userAction = Observable(w, "user-action", Dict{String,Any}())
+# for rendering env (julia -> js)
 env__ = Observable(w, "env-details", Dict{String,Any}())
+# for any message to the client (julia->js)
 msg = Observable(w, "message", "")
 
 board_size = 9
@@ -61,26 +64,26 @@ on(userAction) do x
 
     move = playMove(x) # user action
     println("user action...")
-    updateEnv__(x)
+    updateEnv__(x)   # this happens kinda late ( along with the next update )
 
-    sleep(1) # otherwise, it's fast .
     move = playMove()  # computer action
     println("computer action...")
     updateEnv__(stringToAction(go.to_kgs(move), -1))
 
     controller["playing"] = false
 
-    is_done(controller["model"]) && msg[] = "Game over! " * controller["model"].result_string
+    is_done(controller["model"]) && ( return msg[] = "Game over! " * controller["model"].result_string )
 end
 
 
 
 function startGame()
+    set_all_params(9)
     # load neural net
     # @load ....
 
-    set_all_params(9)
-    agz_nn = NeuralNet(;tower_height=1)
+
+    agz_nn = loadNeuralNet()
     agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
 
     initialize_game!(agz)
@@ -92,7 +95,12 @@ function startGame()
 
     w(dom"div#demo_wrapper"(
         dom"div#controls"(
+            dom"h1"("Go game"),
             dom"button.pass"("Pass")
+            # dom"div.options"(
+            #     dom"div.black"(),
+            #     dom"div.white.fade"(),
+            # )
         ),
         dom"div#playground"(),
         dom"div.hidden#msg"()))
@@ -114,11 +122,13 @@ function playMove(x)
 end
 
 function actionToString(a)
+    a["y"] == -1 && a["x"] == -1 && return "pass"
     t = (a["y"], a["x"]) .+ 1
     go.to_kgs(t)
 end
 
 function stringToAction(s, c)
+    s == "pass" && return Dict("x"=>-1,"y"=>-1,"c"=>c)
     (y, x) = go.from_kgs(s) .- 1
     Dict("x"=>x,"y"=>y,"c"=>c)
 end
@@ -149,11 +159,32 @@ function updateEnv__(move)
     env__[] = env
 end
 
-colorDict = Dict(1=>"BLACK",-1=>"WHITE")
-
 function isIllegalMove(x)
     AlphaGo.get_position(controller["model"]) == nothing && return true
     !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), go.from_kgs(actionToString(x)))
 end
+
+function loadNeuralNet()
+    set_all_params(9)
+
+    @load "../models/agz_128_base.bson" bn
+    @load "../models/agz_128_value.bson" value
+    @load "../models/agz_128_policy.bson" policy
+
+    @load "../models/weights/agz_128_base.bson" bn_weights
+    @load "../models/weights/agz_128_value.bson" val_weights
+    @load "../models/weights/agz_128_policy.bson" pol_weights
+
+    Flux.loadparams!(bn,bn_weights)
+    Flux.loadparams!(value, val_weights)
+    Flux.loadparams!(policy, pol_weights)
+
+    bn = mapleaves(cu, bn)
+    value = mapleaves(cu, value)
+    policy = mapleaves(cu, policy)
+
+    NeuralNet(base_net = bn, value = value, policy = policy)
+end
+
 
 startGame()
