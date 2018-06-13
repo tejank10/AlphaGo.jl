@@ -61,7 +61,7 @@ on(userAction) do x
     updateEnv__(x)
 
     move = playMove()  # computer action
-    updateEnv__(stringToAction(move, -1))
+    updateEnv__(stringToAction(go.to_kgs(move), -1))
 
     controller["playing"] = false
 
@@ -95,7 +95,7 @@ end
 
 function playMove()
     move = suggest_move(controller["model"])
-    @show move
+    prinln(go.to_kgs(move))
     play_move!(controller["model"], move)
     return move
 end
@@ -103,7 +103,7 @@ end
 function playMove(x)
     move = actionToString(x)
     @show move
-    play_move!(controller["model"], move)
+    play_move!(controller["model"], go.from_kgs(move))
     return move
 end
 
@@ -142,7 +142,7 @@ colorDict = Dict(1=>"BLACK",-1=>"WHITE")
 
 function isIllegalMove(x)
     AlphaGo.get_position(controller["model"]) == nothing && return true
-    !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), actionToString(x))
+    !AlphaGo.go.is_move_legal(AlphaGo.get_position(controller["model"]), go.from_kgs(actionToString(x)))
 end
 
 startGame()
