@@ -22,8 +22,7 @@ bn = mapleaves(cu, bn)
 value = mapleaves(cu, value)
 policy = mapleaves(cu, policy)
 
-# agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
-agz_nn = NeuralNet(;tower_height=1)
+agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
 agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
 
 initialize_game!(agz)

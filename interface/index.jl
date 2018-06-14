@@ -4,9 +4,10 @@
 
 using AlphaGo
 using AlphaGo: go
+using Flux
 using WebIO
 using JSExpr
-
+using BSON: @load
 
 controller = Dict()
 controller["playing"] = false
@@ -56,9 +57,11 @@ onjs(msg, JSExpr.@js x-> begin
 end)
 
 on(userAction) do x
+    is_done(controller["model"]) && ( return msg[] = "Game over! " * controller["model"].result_string )
+
     controller["playing"] && return msg[] = "computer's turn!"
 
-    isIllegalMove(x) && return
+    isIllegalMove(x) && return msg[] = "Illegal Move"
 
     controller["playing"] = true
 
@@ -166,22 +169,23 @@ end
 
 function loadNeuralNet()
     set_all_params(9)
+    path(s) = normpath("$(@__DIR__)/"*s)
 
-    @load "../models/agz_128_base.bson" bn
-    @load "../models/agz_128_value.bson" value
-    @load "../models/agz_128_policy.bson" policy
+    @load path("../models/agz_128_base.bson") bn
+    @load path("../models/agz_128_value.bson") value
+    @load path("../models/agz_128_policy.bson") policy
 
-    @load "../models/weights/agz_128_base.bson" bn_weights
-    @load "../models/weights/agz_128_value.bson" val_weights
-    @load "../models/weights/agz_128_policy.bson" pol_weights
+    @load path("../models/weights/agz_128_base.bson") bn_weights
+    @load path("../models/weights/agz_128_value.bson") val_weights
+    @load path("../models/weights/agz_128_policy.bson") pol_weights
 
     Flux.loadparams!(bn,bn_weights)
     Flux.loadparams!(value, val_weights)
     Flux.loadparams!(policy, pol_weights)
 
-    bn = mapleaves(cu, bn)
-    value = mapleaves(cu, value)
-    policy = mapleaves(cu, policy)
+    # bn = mapleaves(cu, bn)
+    # value = mapleaves(cu, value)
+    # policy = mapleaves(cu, policy)
 
     NeuralNet(base_net = bn, value = value, policy = policy)
 end

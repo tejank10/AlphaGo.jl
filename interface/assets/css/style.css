@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css?family=Lato');
+
 *{
   margin:0;
   padding:0;
   transition: all .4s linear;
-  font: 18px/22px arial, verdana;
+  font: 18px/22px 'Lato', sans-serif;
   box-sizing: border-box;
 }
 

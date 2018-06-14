@@ -20,7 +20,8 @@ function __init__(){
 
   board.addEventListener("click", function(x, y){
       console.log(x.toString() + " " + y.toString())
-      game.action({type: "stone", x, y, c: WGo.B});
+      var action = {type: "NORMAL", x, y, c: WGo.B};
+      game.action(action);
   })
 
   function setBoardSize(int){
@@ -67,7 +68,7 @@ function __init__(){
                 this.fillStyle = "rgba(0,0,0,0.7)";
                 this.textBaseline="middle";
                 this.textAlign="center";
-                this.font = board.stoneRadius+"px "+(board.font || "");
+                this.font = board.stoneRadius+"px "+(board.font || "Lato");
 
                 xright = board.getX(-0.75);
                 xleft = board.getX(board.size-0.25);
