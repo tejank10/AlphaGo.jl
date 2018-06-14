@@ -1,71 +1,4 @@
-using AlphaGo, CuArrays, Flux
-using BSON: @load, @save
-
-CL_FLAGS = ["-brd_sz", "-twr_ht", "-mem_sz", "-num_games", "-batch_sz", "-eval_frq", "-ro", "-eval_games"]
-
-BOARD_SIZE = 19
-TOWER_HEIGHT = 19
-NUM_GAMES = 25000
-MEM_SIZE = 500000
-BATCH_SIZE = 2048
-EVAL_FREQ = 1000
-READOUTS = 800
-EVAL_GAMES = 400
-
-function parse_args()
-  global BOARD_SIZE, TOWER_HEIGHT, NUM_GAMES, MEM_SIZE, BATCH_SIZE, EVAL_FREQ,
-          READOUTS, EVAL_GAMES
-  ix = findfirst(x->x=="-brd_sz", ARGS)
-  if ix != 0
-    BOARD_SIZE = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-twr_ht", ARGS)
-  if ix != 0
-    TOWER_HEIGHT = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-num_games", ARGS)
-  if ix != 0
-    NUM_GAMES = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-mem_sz", ARGS)
-  if ix != 0
-    MEM_SIZE = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-batch_sz", ARGS)
-  if ix != 0
-    BATCH_SIZE = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-eval_frq", ARGS)
-  if ix != 0
-    EVAL_FREQ = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-ro", ARGS)
-  if ix != 0
-    READOUTS = parse(Int, ARGS[ix + 1])
-  end
-
-  ix = findfirst(x->x=="-eval_games", ARGS)
-  if ix != 0
-    EVAL_GAMES = parse(Int, ARGS[ix + 1])
-  end
-end
-
-parse_args()
-
-set_all_params(BOARD_SIZE)
-
-cur_nn = NeuralNet(; tower_height = TOWER_HEIGHT)
-prev_nn = deepcopy(cur_nn)
-
-pos_buffer = Vector{AlphaGo.go.Position}()
-π_buffer = Vector{Vector{Float32}}()
-res_buffer = Vector{Int}()
+using BSON: @save
 
 function get_replay_batch(pos_buffer, π_buffer, res_buffer)
   idxs = rand(1:length(pos_buffer), BATCH_SIZE)
@@ -76,47 +9,82 @@ function get_replay_batch(pos_buffer, π_buffer, res_buffer)
   pos_replay, π_replay, res_replay
 end
 
-for i = 1:NUM_GAMES
-  player = selfplay(cur_nn, READOUTS)
-  p, π, v = extract_data(player)
+#TODO: Model save path
 
-  pos_buffer = vcat(pos_buffer, p)
-  π_buffer = vcat(π_buffer, π)
-  res_buffer = vcat(res_buffer, v)
+function save_model(nn::NeuralNet, iter)
+  bn,value, policy = cpu.((nn.base_net, nn.value, nn.policy))
+  @save "../models/agz_$(iter)_base.bson" bn
+  @save "../models/agz_$(iter)_value.bson" value
+  @save "../models/agz_$(iter)_policy.bson" policy
 
-  if length(pos_buffer) > MEM_SIZE
-    pos_buffer = pos_buffer[end-MEM_SIZE+1:end]
-    π_buffer = π_buffer[end-MEM_SIZE+1:end]
-    res_buffer = res_buffer[end-MEM_SIZE+1:end]
+  # saving weights
+  bn_weights = cpu.(Tracker.data.(params(bn)))
+  val_weights = cpu.(Tracker.data.(params(value)))
+  pol_weights = cpu.(Tracker.data.(params(policy)))
+
+  @save "../models/weights/agz_$(iter)_base.bson" bn_weights
+  @save "../models/weights/agz_$(iter)_value.bson" val_weights
+  @save "../models/weights/agz_$(iter)_policy.bson" pol_weights
+end
+
+function eval_model(cur_nn, prev_nn; num_games = 400, ro = 800)
+  cur_is_winner = evaluate(cur_nn, prev_nn; num_games = EVAL_GAMES, ro = readouts)
+  print("Evaluated. ")
+  if cur_is_winner
+    prev_nn = deepcopy(cur_nn)
+    save_model(cur_nn, i)
+    return true
+  cur_nn = deepcopy(prev_nn)
+  return false
+end
+
+
+#TODO: default model??
+
+function train(; num_games::Int = 25000, memory_size::Int = 500000,
+  batch_size::Int = 32, eval_freq::Int = 1000, readouts::Int = 800,
+  eval_games::Int=400, tower_height::Int = 19, model = nothing)
+
+  @assert 0 ≤ tower_height ≤ 19
+
+  if model == nothing
+    cur_nn = NeuralNet(; tower_height = tower_height)
+  else
+    cur_nn = model
   end
 
-  replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
-  loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
+  prev_nn = deepcopy(cur_nn)
 
-  print("Episode $i over. Loss: $loss ")
-  if i % EVAL_FREQ == 0
-    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = EVAL_GAMES, ro = READOUTS)
-    print(" Evaluated.")
-    if cur_is_winner
-      prev_nn = deepcopy(cur_nn)
-      bn,value, policy = cpu.((cur_nn.base_net, cur_nn.value, cur_nn.policy))
-      @save "../models/agz_$(i)_base.bson" bn
-      @save "../models/agz_$(i)_value.bson" value
-      @save "../models/agz_$(i)_policy.bson" policy
+  pos_buffer = Vector{AlphaGo.go.Position}()
+  π_buffer = Vector{Vector{Float32}}()
+  res_buffer = Vector{Int}()
 
-      # saving weights
-      bn_weights = cpu.(Tracker.data.(params(bn)))
-      val_weights = cpu.(Tracker.data.(params(value)))
-      pol_weights = cpu.(Tracker.data.(params(policy)))
+  for i = 1:num_games
+    player = selfplay(cur_nn, readouts)
+    p, π, v = extract_data(player)
 
-      @save "../models/weights/agz_$(i)_base.bson" bn_weights
-      @save "../models/weights/agz_$(i)_value.bson" val_weights
-      @save "../models/weights/agz_$(i)_policy.bson" pol_weights
-      print(" Model updated")
-    else
-      cur_nn = deepcopy(prev_nn)
-      print(" Model retained")
+    pos_buffer = vcat(pos_buffer, p)
+    π_buffer = vcat(π_buffer, π)
+    res_buffer = vcat(res_buffer, v)
+
+    if length(pos_buffer) > MEM_SIZE
+      pos_buffer = pos_buffer[end-MEM_SIZE+1:end]
+      π_buffer = π_buffer[end-MEM_SIZE+1:end]
+      res_buffer = res_buffer[end-MEM_SIZE+1:end]
     end
+
+    replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
+    loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
+
+    print("Episode $i over. Loss: $loss ")
+    if i % eval_freq == 0
+      if eval_model(cur_nn, prev_nn)
+        print("Model updated.")
+      else
+        print("Model retained")
+      end
+    end
+
+    println()
   end
-  println()
 end
