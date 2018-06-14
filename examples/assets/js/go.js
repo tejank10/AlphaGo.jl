@@ -1,10 +1,7 @@
-var game = {};
-const $$ = (e) => document.querySelector(e);
-
+var $$ = e => document.querySelector(e);
 function __init__(){
-  console.log("__init__")
   // setup board
-  var config = {
+  var boardConfig = {
       width: 500,
       section: {
           top: -1,
@@ -14,49 +11,27 @@ function __init__(){
       }
   }
 
-  var board =  new WGo.Board($$("#playground"), config)
+  var board =  new WGo.Board($$("#playground"), boardConfig)
 
-  console.log(board)
+  board.setSize(Math.floor(game.config.boardSize))
 
   board.addEventListener("click", function(x, y){
-      console.log(x.toString() + " " + y.toString())
+      console.log("clicked")
       var action = {type: "NORMAL", x, y, c: WGo.B};
       game.action(action);
   })
 
-  function setBoardSize(int){
-    console.log(int)
-    board.setSize(Math.floor(int))
-  }
-
   function update(env){
-      console.log("update: " + env.action.x + " " + env.action.y + " " + env.action.c)
       if(env.action.x != -1 && env.action.y != -1 ){
           var action = Object.assign({}, env.action,{"type": "NORMAL"})
           board.addObject(action)
           setTimeout(() => board.restoreState(env.state), 500);
       }
-
-      // Array.from($$("#controls .options div")).forEach(e => toggleFade(e))
   }
-
-  function showMsg(msg){
-
-      $$("#msg").innerText = msg.toString();
-      show($$("#msg"))
-      setTimeout(()=>hide($$("#msg")), 3000)
-  }
-
-  game = Object.assign(game, {
-    setBoardSize,
-    update,
-    showMsg
-  })
 
   $$("#controls .pass").addEventListener("click", function (e){
-      game.action({x: -1, y: -1});
+      game.action({x: -1, y: -1, c:WGo.B});
   })
-
 
   // draw coordinates
   var coordinates = {
@@ -94,29 +69,8 @@ function __init__(){
     }
     board.addCustomObject(coordinates);
 
-
-    function show(ele){
-    	if(ele.className.match("hidden") != null){
-    		ele.className = ele.className.replace("hidden", "");
-    	}
-    }
-
-    function hide(ele){
-    	if(ele.className.match("hidden") == null){
-    		ele.className += " hidden";
-    	}
-    }
-
-    function toggleFade(e){
-        return toggleClass(e, "fade")
-    }
-
-    function toggleClass(e, name){
-        if(ele.className.match(name) != null){
-            ele.className = ele.className.replace(name, "");
-        }else{
-            ele.className += " " + name;
-        }
-    }
-
+    game = Object.assign(game, {
+      update,
+      showMsg
+    })
 }
