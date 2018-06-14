@@ -27,17 +27,6 @@ function save_model(nn::NeuralNet, iter)
   @save "../models/weights/agz_$(iter)_policy.bson" pol_weights
 end
 
-function eval_model(cur_nn, prev_nn; num_games = 400, ro = 800)
-  cur_is_winner = evaluate(cur_nn, prev_nn; num_games = EVAL_GAMES, ro = readouts)
-  print("Evaluated. ")
-  if cur_is_winner
-    prev_nn = deepcopy(cur_nn)
-    save_model(cur_nn, i)
-    return true
-  cur_nn = deepcopy(prev_nn)
-  return false
-end
-
 
 #TODO: default model??
 
@@ -67,10 +56,10 @@ function train(; num_games::Int = 25000, memory_size::Int = 500000,
     π_buffer = vcat(π_buffer, π)
     res_buffer = vcat(res_buffer, v)
 
-    if length(pos_buffer) > MEM_SIZE
-      pos_buffer = pos_buffer[end-MEM_SIZE+1:end]
-      π_buffer = π_buffer[end-MEM_SIZE+1:end]
-      res_buffer = res_buffer[end-MEM_SIZE+1:end]
+    if length(pos_buffer) > memory_size
+      pos_buffer = pos_buffer[end-memory_size+1:end]
+      π_buffer = π_buffer[end-memory_size+1:end]
+      res_buffer = res_buffer[end-memory_size+1:end]
     end
 
     replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
@@ -78,10 +67,15 @@ function train(; num_games::Int = 25000, memory_size::Int = 500000,
 
     print("Episode $i over. Loss: $loss ")
     if i % eval_freq == 0
-      if eval_model(cur_nn, prev_nn)
-        print("Model updated.")
+      cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
+      print("Evaluated. ")
+      if cur_is_winner
+        prev_nn = deepcopy(cur_nn)
+        save_model(cur_nn, i)
+        print("Model updated. ")
       else
-        print("Model retained")
+        cur_nn = deepcopy(prev_nn)
+        print("Model retained. ")
       end
     end
 
