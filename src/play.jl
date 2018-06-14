@@ -5,13 +5,13 @@ using Flux, CuArrays
 
 set_all_params(9)
 
-@load "../models/agz_128_base.bson" bn
-@load "../models/agz_128_value.bson" value
-@load "../models/agz_128_policy.bson" policy
+@load "../models/agz_448_base.bson" bn
+@load "../models/agz_448_value.bson" value
+@load "../models/agz_448_policy.bson" policy
 
-@load "../models/weights/agz_128_base.bson" bn_weights
-@load "../models/weights/agz_128_value.bson" val_weights
-@load "../models/weights/agz_128_policy.bson" pol_weights
+@load "../models/weights/agz_448_base.bson" bn_weights
+@load "../models/weights/agz_448_value.bson" val_weights
+@load "../models/weights/agz_448_policy.bson" pol_weights
 
 Flux.loadparams!(bn,bn_weights)
 Flux.loadparams!(value, val_weights)
