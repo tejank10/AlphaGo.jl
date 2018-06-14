@@ -1,7 +1,7 @@
 using BSON: @save
 
-function get_replay_batch(pos_buffer, π_buffer, res_buffer)
-  idxs = rand(1:length(pos_buffer), BATCH_SIZE)
+function get_replay_batch(pos_buffer, π_buffer, res_buffer; batch_size = 32)
+  idxs = rand(1:length(pos_buffer), batch_size)
   pos_replay = pos_buffer[idxs]
   π_replay = hcat(π_buffer[idxs]...)
   res_replay = res_buffer[idxs]
