@@ -19,7 +19,7 @@ end
 struct IllegalMove <:Exception end
 
 function set_board_size(n::Int = 19)
-  global N, ALL_COORDS, EMPTY_BOARD, NEIGHBORS, DIAGONALS
+  #global N, ALL_COORDS, EMPTY_BOARD, NEIGHBORS, DIAGONALS
   #n ∈ (9, 13, 17, 19) || error("Illegal board size $n")
   N = n
   ALL_COORDS = [(i, j) for i = 1:n for j = 1:n]
