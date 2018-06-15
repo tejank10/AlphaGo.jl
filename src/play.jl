@@ -24,7 +24,7 @@ end
 function play(nn = nothing; tower_height = 19, num_readouts = 800)
   @assert 0 ≤ tower_height ≤ 19
 
-  if nn = nothing
+  if nn == nothing
     nn = NeuralNet(; tower_height = tower_height)
   end
 
