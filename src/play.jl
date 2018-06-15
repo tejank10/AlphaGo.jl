@@ -21,7 +21,13 @@ function load_model(model_path)
 end
 
 # Plays with user
-function play(nn::NeuralNet; num_readouts = 800)
+function play(nn = nothing; tower_height = 19, num_readouts = 800)
+  @assert 0 ≤ tower_height ≤ 19
+
+  if nn = nothing
+    nn = NeuralNet(; tower_height = tower_height)
+  end
+
   agz = MCTSPlayer(nn, num_readouts = num_readouts, two_player_mode = true)
 
   initialize_game!(agz)
@@ -45,6 +51,7 @@ function play(nn::NeuralNet; num_readouts = 800)
 
       move = pick_move(agz)
       println(go.to_kgs(move))
+    end
     if play_move!(agz, move)
       num_moves += 1
     end
