@@ -9,7 +9,7 @@ using StatsBase: Weights
 export MCTSPlayer, NeuralNet, tree_search!, pick_move, play_move!,
       set_all_params, initialize_game!, extract_data, set_result!,
       should_resign, is_done, evaluate, result, train!, selfplay,
-      train
+      train, play, load_model
 
 include("go.jl")
 include("mcts.jl")
@@ -18,6 +18,7 @@ include("features.jl")
 include("neural_net.jl")
 include("selfplay.jl")
 include("train.jl")
+include("play.jl")
 
 using .go
 
