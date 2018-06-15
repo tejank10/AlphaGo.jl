@@ -6,6 +6,17 @@ export show, is_over, step!, make_env
 include("board.jl")
 include("coords.jl")
 
+N = 19
+ALL_COORDS = [(i, j) for i = 1:N for j = 1:N]
+EMPTY_BOARD = zeros(Int8, N, N)
+
+check_bounds(c) = 1 <= c[1] <= N && 1 <= c[2] <= N
+
+NEIGHBORS = Dict((x, y) => filter(k->check_bounds(k),
+                          [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]) for (x, y) in ALL_COORDS)
+DIAGONALS = Dict((x, y) => filter(k->check_bounds(k),
+                          [(x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)]) for (x, y) in ALL_COORDS)
+
 action_space() = N * N  + 1 # N² + pass move
 
 state_space() = N * N # Board size
