@@ -20,7 +20,8 @@ files=[
 gw = GameWindow(files; config=Dict("boardSize"=>9))
 setup(gw) # default setup
 
-agz_nn = loadNeuralNet()
+# agz_nn = loadNeuralNet()
+agz_nn = NeuralNet(;tower_height=1)
 agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
 
 playing = false
