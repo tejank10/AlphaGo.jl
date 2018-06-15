@@ -23,7 +23,7 @@ mutable struct NeuralNet
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2go.N*go.N, go.N*go.N+1)) |> gpu
+                      Dense(2go.N*go.N, go.N*go.N+1), x -> softmax(x)) |> gpu
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
@@ -97,7 +97,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
     while true
       active = num_move % 2 == true ? white : black
       inactive = num_move % 2 == true? black : white
-
+     
       current_readouts = N(active.root)
       readouts = active.num_readouts
 
@@ -107,21 +107,25 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 
       # First, check the roots for hopeless games.
       if should_resign(active)  # Force resign
-        set_result!(active, inactive.root.position.to_play, true)
-        set_result!(inactive, inactive.root.position.to_play, true)
-      end
-      if is_done(active)
-        set_result!(active, 0, false)
-        set_result!(inactive, 0, false)
-        break
+        set_result!(active, -active.root.position.to_play, true)
+        set_result!(inactive, -active.root.position.to_play, true)
+	break
       end
 
       move = pick_move(active)
       play_move!(active, move)
       play_move!(inactive, move)
       num_move += 1
+
+      if is_done(active)
+        winner = result(active.root.position)
+        set_result!(active,winner,false)
+	set_result!(inactive, winner, false)
+        println("Finished $i. ", active.result_string)
+	break
+      end
     end
-    games_won += black.result == go.BLACK
+    games_won += result(black.root.position) == go.BLACK
   end
 
   testmode!(black_net, false)

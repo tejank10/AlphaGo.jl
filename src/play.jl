@@ -22,7 +22,7 @@ value = mapleaves(cu, value)
 policy = mapleaves(cu, policy)
 
 agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
-agz = MCTSPlayer(agz_nn, num_readouts = 64, two_player_mode = true)
+agz = MCTSPlayer(agz_nn, num_readouts = 256, two_player_mode = true)
 
 initialize_game!(agz)
 num_moves = 0

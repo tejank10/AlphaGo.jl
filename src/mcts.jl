@@ -121,7 +121,8 @@ function select_leaf(mcts_node::MCTSNode)
     mask = Bool.(legal_moves(current))
     cas = child_action_score(current)
     max_score = maximum(cas[mask])
-    best_move = intersect(find(x -> x == max_score, cas), find(x->x==true, mask))[1]
+    valid_moves = intersect(find(x -> x == max_score, cas), find(x->x==true, mask))
+    best_move = sample(valid_moves)
     current = maybe_add_child!(current, best_move)
 	end
   return current
@@ -185,7 +186,7 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
     return
 	end
   mcts_node.is_expanded = true
-  mcts_node.original_prior = mcts_node.child_prior = move_probs
+  mcts_node.original_prior .= mcts_node.child_prior .= move_probs
   # initialize child Q as current node's value, to prevent dynamics where
   # if B is winning, then B will only ever explore 1 move, because the Q
   # estimation will be so much larger than the 0 of the other moves.
@@ -194,7 +195,7 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   # continuing to explore the most favorable move. This is a waste of search.
   #
   # The value seeded here acts as a prior, and gets averaged into Q calculations
-  mcts_node.child_W = ones(Float32, go.N * go.N + 1) * value
+  mcts_node.child_W .= ones(Float32, go.N * go.N + 1) * value
   backup_value!(mcts_node, value, up_to)
 end
 
@@ -257,7 +258,7 @@ function most_visited_path(mcts_node::MCTSNode)
       push!(output, "GAME END")
       break
     end
-    push!(output, go.to_kgs(go.from_flat(node.fmove) * " ($(N(node))) ==> "))
+    push!(output, go.to_kgs(go.from_flat(node.fmove)) * " ($(N(node))) ==> ")
   end
   push!(output, @sprintf("Q: %.5f\n", Q(node)))
   return join(output)

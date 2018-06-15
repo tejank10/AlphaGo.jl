@@ -6,6 +6,9 @@ Reference: Python version of the implementation of Go by
 
 import Base: ==, deepcopy, show
 using IterTools: chain
+
+# Cell occupants
+#@enum CELL_OCC WHITE = -1 EMPTY BLACK  FILL KO UNKNOWN
 WHITE, EMPTY, BLACK, FILL, KO, UNKNOWN = collect(-1:4)
 
 # Represents "group not found" in the LibertyTracker object

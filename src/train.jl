@@ -43,7 +43,7 @@ function train(; num_games::Int = 25000, memory_size::Int = 500000,
   end
 
   prev_nn = deepcopy(cur_nn)
-
+  println(params(prev_nn.value)[end])
   pos_buffer = Vector{AlphaGo.go.Position}()
   π_buffer = Vector{Vector{Float32}}()
   res_buffer = Vector{Int}()
@@ -81,4 +81,5 @@ function train(; num_games::Int = 25000, memory_size::Int = 500000,
 
     println()
   end
+  return cur_nn
 end

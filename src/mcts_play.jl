@@ -54,7 +54,9 @@ function pick_move(mcts_player::MCTSPlayer)
   Highest N is most robust indicator. In the early stage of the game, pick
   a move weighted by visit count; later on, pick the absolute max. =#
   if mcts_player.root.position.n >= mcts_player.τ_threshold
-    fcoord = findmax(mcts_player.root.child_N)[2]
+    max_val = maximum(mcts_player.root.child_N)
+    possible_moves = find(x->x == max_val, mcts_player.root.child_N)
+    fcoord = sample(possible_moves)
   else
     π = children_as_π(mcts_player.root, true)
     fcoord = sample(1:length(π), Weights(π))
