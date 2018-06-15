@@ -33,7 +33,7 @@ while !is_done(agz)
 
   if num_moves % 2 == 0
     print("Your turn: ")
-    move = input(STDIN)
+    move = readline(STDIN)
     move = go.from_kgs(move)
   else
     print("AGZ's turn: ")
