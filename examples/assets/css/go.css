@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css?family=Lato');
+
+*{
+  margin:0;
+  padding:0;
+  transition: all .4s linear;
+  font: 18px/22px 'Lato', sans-serif;
+  box-sizing: border-box;
+}
+
+
+button, #msg{
+  height: 30px;
+  line-height: 30px;
+  font-size: 18px;
+}
+
+h1{
+  font-size: 30px;
+}
+
+button{
+  width: 70px;
+  text-align: center;
+  background: #ddd;
+  margin: 20px 10px;
+  border: 1px solid #000;
+  border-radius: 3px;
+}
+
+#playground, #controls{
+  width: 500px;
+  margin: 0 auto;
+}
+
+#controls{
+  background: #ddd;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 20px;
+  align-items: center;
+
+}

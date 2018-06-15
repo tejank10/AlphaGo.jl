@@ -138,7 +138,7 @@ get_position(mcts_player::MCTSPlayer) = mcts_player.root != nothing ?
 function suggest_move(mcts_player::MCTSPlayer)
   current_readouts = N(mcts_player.root)
   while N(mcts_player.root) < current_readouts + mcts_player.num_readouts
-    tree_search(mcts_player)
+    tree_search!(mcts_player)
   end
 
   pick_move(mcts_player)
