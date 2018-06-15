@@ -3,6 +3,9 @@ using AlphaGo: go
 using Flux
 using BSON: @load
 
+# Note:
+# do Pkg.checkout("WebIO", "s/asset-registry")
+# and Pkg.checkout("Mux", "s/asset-registry")
 include("../src/interface.jl")
 include("./helpers.jl")
 
