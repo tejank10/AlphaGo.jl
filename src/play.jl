@@ -1,8 +1,7 @@
 using BSON: @load
 using AlphaGo
 using AlphaGo:N, go
-using Flux
-# CuArrays
+using Flux, CuArrays
 
 set_all_params(9)
 
