@@ -33,13 +33,17 @@ function play(nn = nothing; tower_height = 19, num_readouts = 800)
   initialize_game!(agz)
   num_moves = 0
 
-  while true
+  while !is_done(agz)
     print(agz.root.position)
 
     if num_moves % 2 == 0
       print("Your turn: ")
       move = readline(STDIN)
-      move = go.from_kgs(move)
+      try
+      	move = go.from_kgs(move)
+      catch
+        println("Illegal move! Trye again.")
+      end
     else
       print("AGZ's turn: ")
       current_readouts = N(agz.root)
@@ -57,7 +61,9 @@ function play(nn = nothing; tower_height = 19, num_readouts = 800)
     end
   end
 
-  winner = result(agz)
+  println("GAME OVER")
+
+  winner = go.result(agz.root.position)
   set_result!(agz, winner, false)
 
   if winner == go.BLACK

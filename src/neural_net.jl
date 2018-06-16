@@ -109,6 +109,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
       if should_resign(active)  # Force resign
         set_result!(active, -active.root.position.to_play, true)
         set_result!(inactive, -active.root.position.to_play, true)
+        println("Finished $i. ", active.result_string)	
 	break
       end
 

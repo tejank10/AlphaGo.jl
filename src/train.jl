@@ -30,7 +30,7 @@ end
 
 #TODO: default model??
 
-function train(; num_games::Int = 25000, memory_size::Int = 500000,
+function train(; num_iters = 10000, num_games::Int = 25000, memory_size::Int = 500000,
   batch_size::Int = 32, eval_freq::Int = 1000, readouts::Int = 800,
   eval_games::Int=400, tower_height::Int = 19, model = nothing)
 
@@ -43,42 +43,45 @@ function train(; num_games::Int = 25000, memory_size::Int = 500000,
   end
 
   prev_nn = deepcopy(cur_nn)
-  println(params(prev_nn.value)[end])
+
   pos_buffer = Vector{AlphaGo.go.Position}()
   π_buffer = Vector{Vector{Float32}}()
   res_buffer = Vector{Int}()
 
-  for i = 1:num_games
-    player = selfplay(cur_nn, readouts)
-    p, π, v = extract_data(player)
+  for iter = 1:num_iters
+    for i = 1:num_games
+      player = selfplay(cur_nn, readouts)
+      p, π, v = extract_data(player)
 
-    pos_buffer = vcat(pos_buffer, p)
-    π_buffer = vcat(π_buffer, π)
-    res_buffer = vcat(res_buffer, v)
+      pos_buffer = vcat(pos_buffer, p)
+      π_buffer = vcat(π_buffer, π)
+      res_buffer = vcat(res_buffer, v)
 
-    if length(pos_buffer) > memory_size
-      pos_buffer = pos_buffer[end-memory_size+1:end]
-      π_buffer = π_buffer[end-memory_size+1:end]
-      res_buffer = res_buffer[end-memory_size+1:end]
+      if length(pos_buffer) > memory_size
+        pos_buffer = pos_buffer[end-memory_size+1:end]
+        π_buffer = π_buffer[end-memory_size+1:end]
+        res_buffer = res_buffer[end-memory_size+1:end]
+      end
     end
-
+    
     replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
     loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
 
-    print("Episode $i over. Loss: $loss ")
-    if i % eval_freq == 0
-      cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
-      print("Evaluated. ")
-      if cur_is_winner
-        prev_nn = deepcopy(cur_nn)
-        save_model(cur_nn, i)
-        print("Model updated. ")
-      else
-        cur_nn = deepcopy(prev_nn)
-        print("Model retained. ")
-      end
-    end
+    println("Episode $iter over. Loss: $loss ")
 
+    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
+    print("Evaluated. ")
+    if cur_is_winner
+      prev_nn = deepcopy(cur_nn)
+      if iter % eval_freq == 0
+        save_model(cur_nn, iter)
+      end
+      print("Model updated. ")
+    else
+      cur_nn = deepcopy(prev_nn)
+      print("Model retained. ")
+    end
+    
     println()
   end
   return cur_nn
