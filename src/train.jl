@@ -64,25 +64,31 @@ function train(; num_iters = 10000, num_games::Int = 25000, memory_size::Int = 5
       end
     end
     
-    replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
-    loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
-
-    println("Episode $iter over. Loss: $loss ")
-
-    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
-    print("Evaluated. ")
-    if cur_is_winner
-      prev_nn = deepcopy(cur_nn)
-      if iter % eval_freq == 0
-        save_model(cur_nn, iter)
-      end
-      print("Model updated. ")
-    else
-      cur_nn = deepcopy(prev_nn)
-      print("Model retained. ")
+    num_epoch = min(128, length(pos_buffer) ÷ 32)
+    loss = 0
+    for epoch = 1:num_epoch
+      replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
+      loss += train!(cur_nn, (replay_pos, replay_π, replay_res))
     end
+
+    println("Episode $iter over. Loss: $(loss/num_epoch) ")
+
+#    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
+ #   print("Evaluated. ")
+  #  if cur_is_winner
+   #   prev_nn = deepcopy(cur_nn)
+    #  print("Model updated. ")
+    #else
+     # cur_nn = deepcopy(prev_nn)
+     # print("Model retained. ")
+   # end
     
-    println()
+    if iter % eval_freq == 0
+      save_model(cur_nn, iter)
+      print("Model saved. ")
+    end
+
+  #  println()
   end
   return cur_nn
 end
