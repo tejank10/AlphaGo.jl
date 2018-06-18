@@ -11,17 +11,17 @@ using Distributions: Dirichlet
 c_puct = 1.38
 # How much to weight the priors vs. dirichlet noise when mixing
 dirichlet_noise_weight = 0.25
-
-function set_mcts_params()
-  global max_game_length, dirichlet_noise_alpha
-  # 505 moves for 19x19, 113 for 9x9
-  # Move number at which game is forcibly terminated
-  max_game_length = (go.N ^ 2 * 7) ÷ 5
-
+struct MCTSRules
+  max_game_length::Int
   # Concentrated-ness of the noise being injected into priors
-  dirichlet_noise_alpha = 0.03 * 361 / (go.N ^ 2)
-end
+  dirichlet_noise_alpha::Float32
 
+  function MCTSRules(env)
+    max_game_length = (env.N ^ 2 * 7) ÷ 5
+    dirichlet_noise_alpha = 0.03 * env.max_action_space / env.action_space
+    new(max_game_length, dirichlet_noise_alpha)
+  end
+end
 mutable struct DummyNode
   #= A fake node of a MCTS search tree.
 
@@ -43,15 +43,14 @@ mutable struct MCTSNode
   so that a decision can be made about which move to explore next. Upon
   selecting a move, the children dictionary is updated with a new node.
 
-  position: A go.Position instance
+  position: A Position instance
   fmove: A move (coordinate) that led to this position, a flattened coord
           (raw number ∈ [1-N^2], with nothing a pass)
   parent: A parent MCTSNode.
   =#
-
   parent
   fmove
-  position::go.Position
+  position<:Position
   is_expanded::Bool
   losses_applied::Int
   child_N::Array{Float32, 1}
@@ -60,24 +59,24 @@ mutable struct MCTSNode
   child_prior::Array{Float32, 1}
   children::Dict
 
-  function MCTSNode(position::go.Position, fmove = nothing, parent = nothing)
+  function MCTSNode(position <: Position, fmove = nothing, parent = nothing)
     if parent == nothing
       parent = DummyNode()
     end
     is_expanded = false
     losses_applied = 0  # number of virtual losses on this node
-    child_N = zeros(Float32, go.N * go.N + 1)
-    child_W = zeros(Float32, go.N * go.N + 1)
+    child_N = zeros(Float32, position.env.action_space)
+    child_W = zeros(Float32, position.env.action_space)
     # save a copy of the original prior before it gets mutated by d-noise.
-    original_prior = zeros(Float32, go.N * go.N + 1)
-    child_prior = zeros(Float32, go.N * go.N + 1)
+    original_prior = zeros(Float32, position.env.action_space)
+    child_prior = zeros(Float32, position.env.action_space)
     children = Dict()  # map of flattened moves to resulting MCTSNode
     new(parent, fmove, position, is_expanded, losses_applied,
     child_N, child_W, original_prior, child_prior, children)
   end
 end
 
-legal_moves(x::MCTSNode) = go.all_legal_moves(x.position)
+legal_moves(x::MCTSNode) = all_legal_moves(x.position, x.)
 
 child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
                                             child_U(x)
@@ -100,9 +99,10 @@ W(x::MCTSNode) = get_W(x)
 # Return value of position, from perspective of player to play
 Q_perspective(x::MCTSNode) = Q(x) * x.position.to_play
 
+# TODO: select leaf
 function select_leaf(mcts_node::MCTSNode)
   current = mcts_node
-  pass_move = go.N * go.N + 1
+  # pass_move = go.N * go.N + 1
   while true
 		current_new_N = N(current) + 1
     set_N!(current, current_new_N)
@@ -112,12 +112,12 @@ function select_leaf(mcts_node::MCTSNode)
 		end
     # HACK: if last move was a pass, always investigate double-pass first
     # to avoid situations where we auto-lose by passing too early.
-    if (length(current.position.recent) != 0
-      && current.position.recent[end].move == nothing
-      && current.child_N[pass_move] == 0)
-      current = maybe_add_child!(current, pass_move)
-      continue
-		end
+    #if (length(current.position.recent) != 0
+    #  && current.position.recent[end].move == nothing
+    #  && current.child_N[pass_move] == 0)
+    #  current = maybe_add_child!(current, pass_move)
+    #  continue
+		#end
     mask = Bool.(legal_moves(current))
     cas = child_action_score(current)
     max_score = maximum(cas[mask])
@@ -131,7 +131,7 @@ end
 function maybe_add_child!(mcts_node::MCTSNode, fcoord)
   # Adds child node for fcoord if it doesn't already exist, and returns it
   if fcoord ∉ keys(mcts_node.children)
-    new_position = go.play_move!(mcts_node.position, go.from_flat(fcoord))
+    new_position = play_move!(mcts_node.position, from_flat(fcoord))
     mcts_node.children[fcoord] = MCTSNode(new_position, fcoord, mcts_node)
 	end
   return mcts_node.children[fcoord]
@@ -177,7 +177,7 @@ function revert_visits!(mcts_node::MCTSNode, up_to::MCTSNode)
 end
 
 function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
-  @assert size(move_probs) == (go.N * go.N + 1,)
+  @assert size(move_probs) == (mcts_node.position.env.action_space,)
   # A finished game should not be going through this code path - should
   # directly call backup_value() on the result of the game.
 	@assert !mcts_node.position.done
@@ -195,7 +195,7 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   # continuing to explore the most favorable move. This is a waste of search.
   #
   # The value seeded here acts as a prior, and gets averaged into Q calculations
-  mcts_node.child_W .= ones(Float32, go.N * go.N + 1) * value
+  mcts_node.child_W .= ones(Float32, mcts_node.position.env.action_space) * value
   backup_value!(mcts_node, value, up_to)
 end
 
@@ -218,7 +218,8 @@ is_done(mcts_node::MCTSNode) = mcts_node.position.done ||
 	 																		mcts_node.position.n >= max_game_length
 
 function inject_noise!(mcts_node::MCTSNode)
-  dirch = rand(Dirichlet(dirichlet_noise_alpha * ones(go.N * go.N + 1)))
+  action_space = mcts_node.position.env.action_space
+  dirch = rand(Dirichlet(dirichlet_noise_alpha * ones(action_space)))
   mcts_node.child_prior = mcts_node.child_prior * (1 - dirichlet_noise_weight) .+
                       dirch .* dirichlet_noise_weight
 end
@@ -247,7 +248,7 @@ function most_visited_path_nodes(mcts_node::MCTSNode)
   end
   return output
 end
-
+#=
 function most_visited_path(mcts_node::MCTSNode)
   node = mcts_node
   output = Array{String, 1}()
@@ -309,3 +310,4 @@ function describe(mcts_node::MCTSNode)
   end
   return join(output)
 end
+=#

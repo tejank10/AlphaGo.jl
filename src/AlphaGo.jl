@@ -1,17 +1,17 @@
 # Run set_board_size(N::Int) once you include go.jl
 
 module AlphaGo
-using CuArrays
+#using CuArrays
 using Flux
 using Flux: crossentropy, back!, mse
 using StatsBase: Weights
 
-export MCTSPlayer, NeuralNet, tree_search!, pick_move, play_move!,
-      set_all_params, initialize_game!, extract_data, set_result!,
+export MCTSPlayer, NeuralNet, pick_move, play_move!,
+      initialize_game!, extract_data, set_result!,
       should_resign, is_done, evaluate, result, train!, selfplay,
       train, play, load_model
 
-include("go.jl")
+include("game/go.jl")
 include("mcts.jl")
 include("mcts_play.jl")
 include("features.jl")

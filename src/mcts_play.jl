@@ -1,6 +1,7 @@
 using StatsBase: sample
 
 mutable struct MCTSPlayer
+  env <: Env
   network
   num_readouts::Int
   two_player_mode::Bool
@@ -13,10 +14,10 @@ mutable struct MCTSPlayer
   resign_threshold
   position
 
-  function MCTSPlayer(network; num_readouts = 800, two_player_mode = false,
+  function MCTSPlayer(env<:Env, network; num_readouts = 800, two_player_mode = false,
                resign_threshold = -0.9)
-    τ_threshold = two_player_mode ? -1 : (go.N * go.N ÷ 12) ÷ 2 * 2
-    new(network, num_readouts, two_player_mode, τ_threshold,
+    τ_threshold = two_player_mode ? -1 : (env.N * env.N ÷ 12) ÷ 2 * 2
+    new(env, network, num_readouts, two_player_mode, τ_threshold,
         Array{Float32, 1}(), Array{Array{Float32, 1}, 1}(), 0, "",
         nothing, resign_threshold, nothing)
   end
@@ -36,8 +37,9 @@ function play_move!(mcts_player::MCTSPlayer, c)
   end
   push!(mcts_player.qs, Q(mcts_player.root))  # Save our resulting Q.
   try
-    mcts_player.root = maybe_add_child!(mcts_player.root, go.to_flat(c))
-  catch go.IllegalMove
+    env = mcts_player.root.position.env
+    mcts_player.root = maybe_add_child!(mcts_player.root, to_flat(c, env))
+  catch IllegalMove
     println("Illegal move")
     if !mcts_player.two_player_mode pop!(mcts_player.searches_π) end
     pop!(mcts_player.qs)
@@ -62,7 +64,7 @@ function pick_move(mcts_player::MCTSPlayer)
     fcoord = sample(1:length(π), Weights(π))
     @assert mcts_player.root.child_N[fcoord] != 0
   end
-  return go.from_flat(fcoord)
+  return from_flat(fcoord)
 end
 
 function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)
@@ -73,7 +75,7 @@ function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)
     leaf = select_leaf(mcts_player.root)
     # if game is over, override the value estimate with the true score
     if is_done(leaf)
-      value = go.score(leaf.position) > 0 ? 1 : -1
+      value = score(leaf.position) > 0 ? 1 : -1
       backup_value!(leaf, value, mcts_player.root)
       continue
     end
@@ -95,16 +97,19 @@ end
 function set_result!(mcts_player::MCTSPlayer, winner, was_resign)
   mcts_player.result = winner
   if was_resign
-    string = winner == go.BLACK ? "B+R" : "W+R"
+    string = winner == BLACK ? "B+R" : "W+R"
   else
-    string = go.result_string(mcts_player.root.position)
-    mcts_player.result = string[1] == 'B' ? go.BLACK :
-                                              (string[1] == 'W' ? go.WHITE : 0)
+    string = result_string(mcts_player.root.position)
+    mcts_player.result = string[1] == 'B' ? BLACK :
+                                              (string[1] == 'W' ? WHITE : 0)
   end
   mcts_player.result_string = string
 end
 
-function initialize_game!(mcts_player::MCTSPlayer, pos = go.Position())
+function initialize_game!(mcts_player::MCTSPlayer, pos = nothing)
+  if pos == nothing
+    pos = Position(mcts_player.env)
+  end
   mcts_player.root = MCTSNode(pos)
   mcts_player.result = 0
   mcts_player.searches_π = Vector{Vector{Float32}}()
@@ -120,11 +125,11 @@ should_resign(mcts_player::MCTSPlayer) = Q_perspective(mcts_player.root) < mcts_
 function extract_data(mcts_player::MCTSPlayer)
   @assert length(mcts_player.searches_π) == mcts_player.root.position.n
   @assert mcts_player.result != 0
-  positions = Vector{go.Position}()
+  positions = Vector{Position}()
   πs = deepcopy(mcts_player.searches_π)
   results = Vector{Int}()
 
-  pwcs = go.replay_position(mcts_player.root.position, mcts_player.result)
+  pwcs = replay_position(mcts_player.root.position, mcts_player.result)
   for pwc in pwcs
     push!(positions, pwc.position)
     push!(results, pwc.result)

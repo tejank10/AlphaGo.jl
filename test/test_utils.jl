@@ -1,4 +1,4 @@
-function load_board(str)
+function load_board(str, go_env::GoEnv)
   reverse_map = Dict{Char, Int}([
       'X' => go.BLACK,
       'O' => go.WHITE,
@@ -8,8 +8,8 @@ function load_board(str)
       '?' => go.UNKNOWN
   ])
   str = replace(str, r"[^XO\.#]+", "")
-  @assert length(str) == go.N ^ 2 # "Board to load didn't have right dimensions"
-  board = zeros(Int8, go.N, go.N)
+  @assert length(str) == go_env.N ^ 2 # "Board to load didn't have right dimensions"
+  board = zeros(Int8, go_env.N, go_env.N)
   for (i, char) in enumerate(str)
       board[i] = reverse_map[char]
   end
