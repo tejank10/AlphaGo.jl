@@ -1,7 +1,7 @@
 using StatsBase: sample
 
 mutable struct MCTSPlayer
-  env <: Env
+  env :: GameEnv
   network
   num_readouts::Int
   two_player_mode::Bool
@@ -14,8 +14,8 @@ mutable struct MCTSPlayer
   resign_threshold
   position
 
-  function MCTSPlayer(env<:Env, network; num_readouts = 800, two_player_mode = false,
-               resign_threshold = -0.9)
+  function MCTSPlayer(env::T, network; num_readouts = 800, two_player_mode = false,
+               resign_threshold = -0.9) where T <: GameEnv
     τ_threshold = two_player_mode ? -1 : (env.N * env.N ÷ 12) ÷ 2 * 2
     new(env, network, num_readouts, two_player_mode, τ_threshold,
         Array{Float32, 1}(), Array{Array{Float32, 1}, 1}(), 0, "",
@@ -64,7 +64,7 @@ function pick_move(mcts_player::MCTSPlayer)
     fcoord = sample(1:length(π), Weights(π))
     @assert mcts_player.root.child_N[fcoord] != 0
   end
-  return from_flat(fcoord)
+  return from_flat(fcoord, mcts_player.env)
 end
 
 function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)

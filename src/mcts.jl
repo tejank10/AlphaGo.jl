@@ -50,7 +50,7 @@ mutable struct MCTSNode
   =#
   parent
   fmove
-  position<:Position
+  position :: Position
   is_expanded::Bool
   losses_applied::Int
   child_N::Array{Float32, 1}
@@ -58,8 +58,9 @@ mutable struct MCTSNode
   original_prior::Array{Float32, 1}
   child_prior::Array{Float32, 1}
   children::Dict
+  mcts_rules::MCTSRules
 
-  function MCTSNode(position <: Position, fmove = nothing, parent = nothing)
+  function MCTSNode(position :: T, fmove = nothing, parent = nothing) where T <: Position
     if parent == nothing
       parent = DummyNode()
     end
@@ -71,12 +72,13 @@ mutable struct MCTSNode
     original_prior = zeros(Float32, position.env.action_space)
     child_prior = zeros(Float32, position.env.action_space)
     children = Dict()  # map of flattened moves to resulting MCTSNode
+    mcts_rules = MCTSRules(position.env)
     new(parent, fmove, position, is_expanded, losses_applied,
-    child_N, child_W, original_prior, child_prior, children)
+    child_N, child_W, original_prior, child_prior, children, mcts_rules)
   end
 end
 
-legal_moves(x::MCTSNode) = all_legal_moves(x.position, x.)
+legal_moves(x::MCTSNode) = all_legal_moves(x.position)
 
 child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
                                             child_U(x)
@@ -131,7 +133,7 @@ end
 function maybe_add_child!(mcts_node::MCTSNode, fcoord)
   # Adds child node for fcoord if it doesn't already exist, and returns it
   if fcoord ∉ keys(mcts_node.children)
-    new_position = play_move!(mcts_node.position, from_flat(fcoord))
+    new_position = play_move!(mcts_node.position, from_flat(fcoord, mcts_node.position.env))
     mcts_node.children[fcoord] = MCTSNode(new_position, fcoord, mcts_node)
 	end
   return mcts_node.children[fcoord]
@@ -215,12 +217,13 @@ end
   	greater than the max depth.
 =#
 is_done(mcts_node::MCTSNode) = mcts_node.position.done ||
-	 																		mcts_node.position.n >= max_game_length
+	 														mcts_node.position.n ≥ mcts_node.mcts_rules.max_game_length
 
 function inject_noise!(mcts_node::MCTSNode)
   action_space = mcts_node.position.env.action_space
-  dirch = rand(Dirichlet(dirichlet_noise_alpha * ones(action_space)))
-  mcts_node.child_prior = mcts_node.child_prior * (1 - dirichlet_noise_weight) .+
+  dirch = rand(Dirichlet(mcts_node.mcts_rules.dirichlet_noise_alpha
+                                                * ones(action_space)))
+  mcts_node.child_prior .= mcts_node.child_prior * (1 - dirichlet_noise_weight) .+
                       dirch .* dirichlet_noise_weight
 end
 

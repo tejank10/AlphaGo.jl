@@ -8,8 +8,8 @@ mutable struct NeuralNet
   value::Chain
   policy::Chain
   opt
-  function NeuralNet(;base_net = nothing, value = nothing, policy = nothing,
-                          tower_height::Int = 19)
+  function NeuralNet(env::T; base_net = nothing, value = nothing, policy = nothing,
+                          tower_height::Int = 19) where T <: GameEnv
     if base_net == nothing
       res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
@@ -19,11 +19,11 @@ mutable struct NeuralNet
     end
     if value == nothing
       value = Chain(Conv((1,1), 256=>1), BatchNorm(1, relu), x->reshape(x, :, size(x, 4)),
-                    Dense(go.N*go.N, 256, relu), Dense(256, 1, tanh)) |> gpu
+                    Dense(env.N*env.N, 256, relu), Dense(256, 1, tanh)) |> gpu
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2go.N*go.N, go.N*go.N+1), x -> softmax(x)) |> gpu
+                      Dense(2env.N*env.N, env.N*env.N+1), x -> softmax(x)) |> gpu
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
@@ -45,7 +45,7 @@ function testmode!(nn::NeuralNet, val::Bool=true)
   testmode!(nn.value, val)
 end
 
-function (nn::NeuralNet)(input::Vector{go.Position})
+function (nn::NeuralNet)(input::Vector{Position})
   nn_in = cat(4, get_feats.(input)...) |> gpu
   testmode!(nn)
 
@@ -56,7 +56,7 @@ function (nn::NeuralNet)(input::Vector{go.Position})
   return π, val
 end
 
-function (nn::NeuralNet)(input::go.Position)
+function (nn::NeuralNet)(input::Position)
   p, v = nn([input])
   return p[:, 1], v[1]
 end
@@ -69,7 +69,7 @@ loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
                            sum(vecnorm, params(nn.value)) +
                            sum(vecnorm, params(nn.policy)))
 
-function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}})
+function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}})
   positions = input_data[1]
   π, z = input_data[2:3] |> gpu
   p, v = nn(positions)
@@ -97,7 +97,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
     while true
       active = num_move % 2 == true ? white : black
       inactive = num_move % 2 == true? black : white
-     
+
       current_readouts = N(active.root)
       readouts = active.num_readouts
 
@@ -109,7 +109,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
       if should_resign(active)  # Force resign
         set_result!(active, -active.root.position.to_play, true)
         set_result!(inactive, -active.root.position.to_play, true)
-        println("Finished $i. ", active.result_string)	
+        println("Finished $i. ", active.result_string)
 	break
       end
 
@@ -126,7 +126,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 	break
       end
     end
-    games_won += result(black.root.position) == go.BLACK
+    games_won += result(black.root.position) == BLACK
   end
 
   testmode!(black_net, false)

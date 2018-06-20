@@ -1,6 +1,4 @@
-module go
-
-struct GoEnv
+struct GoEnv <: GameEnv
   N::Int
   action_space::Int
   max_action_space::Int
@@ -26,9 +24,3 @@ end
 
 include("board.jl")
 include("coords.jl")
-
-export all_legal_moves, play_move!, result_string, BLACK, WHITE, GoPosition,
-        GoEnv, to_flat, from_flat
-
-
-end

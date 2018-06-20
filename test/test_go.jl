@@ -1,6 +1,8 @@
-include("../src/game/go/go.jl")
-using go: from_kgs, GoPosition, PlayerMove, BLACK, WHITE, EMPTY
-using go
+using AlphaGo
+using AlphaGo: from_kgs, from_sgf, BLACK, WHITE, EMPTY, MISSING_GROUP_ID,
+              GoPosition, is_koish, is_eyeish, PlayerMove, is_move_legal,
+              is_move_suicidal, score, from_board, flip_playerturn!, add_stone!,
+              all_legal_moves, IllegalMove, from_flat, pass_move!, play_move!
 using Base.Test
 
 include("test_utils.jl")
@@ -22,10 +24,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
 
   @testset "parsing" begin
     @test from_kgs("A9", env) == (1, 1)
-    @test go.from_sgf("aa") == (1, 1)
+    @test from_sgf("aa") == (1, 1)
     @test from_kgs("A3", env) == (7, 1)
-    @test go.from_sgf("ac") == (3, 1)
-    @test from_kgs("D4", env) == go.from_sgf("df")
+    @test from_sgf("ac") == (3, 1)
+    @test from_kgs("D4", env) == from_sgf("df")
   end
 
   @testset "neighbors" begin
@@ -39,10 +41,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
   end
 
   @testset "is_koish" begin
-    @test go.is_koish(TEST_BOARD, from_kgs("A9", env), env) == BLACK
-    @test go.is_koish(TEST_BOARD, from_kgs("B8", env), env) == nothing
-    @test go.is_koish(TEST_BOARD, from_kgs("B9", env), env) == nothing
-    @test go.is_koish(TEST_BOARD, from_kgs("E5", env), env) == nothing
+    @test is_koish(TEST_BOARD, from_kgs("A9", env), env) == BLACK
+    @test is_koish(TEST_BOARD, from_kgs("B8", env), env) == nothing
+    @test is_koish(TEST_BOARD, from_kgs("B9", env), env) == nothing
+    @test is_koish(TEST_BOARD, from_kgs("E5", env), env) == nothing
   end
 
   @testset "is_eyeish" begin
@@ -61,21 +63,21 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
     W_eyes = pc_set("H2 J1 J3", env)
     not_eyes = pc_set("B3 E5", env)
     for be in B_eyes
-      @test go.is_eyeish(board, be, env) == BLACK ? true : throw(AssertionError(string(be)))
+      @test is_eyeish(board, be, env) == BLACK ? true : throw(AssertionError(string(be)))
     end
     for we in W_eyes
-      @test go.is_eyeish(board, we, env) == WHITE ? true : throw(AssertionError(string(we)))
+      @test is_eyeish(board, we, env) == WHITE ? true : throw(AssertionError(string(we)))
     end
     for ne in not_eyes
-      @test go.is_eyeish(board, ne, env) == nothing ? true : throw(AssertionError(string(ne)))
+      @test is_eyeish(board, ne, env) == nothing ? true : throw(AssertionError(string(ne)))
     end
   end
   @testset "lib_tracker_init" begin
     board = load_board("X........" * repeat(EMPTY_ROW, 8), env)
 
-    lib_tracker = go.from_board(board, env)
+    lib_tracker = from_board(board, env)
     @test length(lib_tracker.groups) == 1
-    @test lib_tracker.group_index[from_kgs("A9", env)...] != go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("A9", env)...] != MISSING_GROUP_ID
     @test lib_tracker.liberty_cache[from_kgs("A9", env)...] == 2
     sole_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("A9", env)...]]
     @test sole_group.stones == pc_set("A9", env)
@@ -85,10 +87,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
 
   @testset "place_stone" begin
     board = load_board("X........" * repeat(EMPTY_ROW, 8), env)
-    lib_tracker = go.from_board(board, env)
-    go.add_stone!(lib_tracker, BLACK, from_kgs("B9", env), env)
+    lib_tracker = from_board(board, env)
+    add_stone!(lib_tracker, BLACK, from_kgs("B9", env), env)
     @test length(lib_tracker.groups) == 1
-    @test lib_tracker.group_index[from_kgs("A9", env)...] != go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("A9", env)...] != MISSING_GROUP_ID
     @test lib_tracker.liberty_cache[from_kgs("A9", env)...] == 3
     @test lib_tracker.liberty_cache[from_kgs("B9", env)...] == 3
     sole_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("A9", env)...]]
@@ -99,11 +101,11 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
 
   @testset "place_stone_opposite_color" begin
     board = load_board("X........" * repeat(EMPTY_ROW, 8), env)
-    lib_tracker = go.from_board(board, env)
-    go.add_stone!(lib_tracker, WHITE, from_kgs("B9", env), env)
+    lib_tracker = from_board(board, env)
+    add_stone!(lib_tracker, WHITE, from_kgs("B9", env), env)
     @test length(lib_tracker.groups) == 2
-    @test lib_tracker.group_index[from_kgs("A9", env)...] != go.MISSING_GROUP_ID
-    @test lib_tracker.group_index[from_kgs("B9", env)...] != go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("A9", env)...] != MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("B9", env)...] != MISSING_GROUP_ID
     @test lib_tracker.liberty_cache[from_kgs("A9", env)...] == 1
     @test lib_tracker.liberty_cache[from_kgs("B9", env)...] == 2
     black_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("A9", env)...]]
@@ -122,10 +124,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         X.X......
         .X.......
     """ * repeat(EMPTY_ROW, 6), env)
-    lib_tracker = go.from_board(board,env)
-    go.add_stone!(lib_tracker, BLACK, from_kgs("B8", env), env)
+    lib_tracker = from_board(board,env)
+    add_stone!(lib_tracker, BLACK, from_kgs("B8", env), env)
     @test length(lib_tracker.groups) == 1
-    @test lib_tracker.group_index[from_kgs("B8", env)...] != go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("B8", env)...] != MISSING_GROUP_ID
     sole_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("B8", env)...]]
     @test sole_group.stones == pc_set("B9 A8 B8 C8 B7", env)
     @test sole_group.liberties == pc_set("A9 C9 D8 A7 C7 B6", env)
@@ -143,10 +145,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         XO.......
         .X.......
     """ * repeat(EMPTY_ROW, 6), env)
-    lib_tracker = go.from_board(board, env)
-    captured = go.add_stone!(lib_tracker, BLACK, from_kgs("C8", env), env)
+    lib_tracker = from_board(board, env)
+    captured = add_stone!(lib_tracker, BLACK, from_kgs("C8", env), env)
     @test length(lib_tracker.groups) == 4
-    @test lib_tracker.group_index[from_kgs("B8", env)...] == go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("B8", env)...] == MISSING_GROUP_ID
     @test captured == pc_set("B8", env)
   end
 
@@ -156,10 +158,10 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         XOO......
         .XX......
     """ * repeat(EMPTY_ROW, 6), env)
-    lib_tracker = go.from_board(board, env)
-    captured = go.add_stone!(lib_tracker, BLACK, from_kgs("D8", env), env)
+    lib_tracker = from_board(board, env)
+    captured = add_stone!(lib_tracker, BLACK, from_kgs("D8", env), env)
     @test length(lib_tracker.groups) == 4
-    @test lib_tracker.group_index[from_kgs("B8", env)...] == go.MISSING_GROUP_ID
+    @test lib_tracker.group_index[from_kgs("B8", env)...] == MISSING_GROUP_ID
     @test captured == pc_set("B8 C8", env)
 
     left_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("A8", env)...]]
@@ -202,8 +204,8 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         OXX......
         XX.......
     """ * repeat(EMPTY_ROW, 6), env)
-    lib_tracker = go.from_board(board, env)
-    captured = go.add_stone!(lib_tracker, BLACK, from_kgs("A9", env), env)
+    lib_tracker = from_board(board, env)
+    captured = add_stone!(lib_tracker, BLACK, from_kgs("A9", env), env)
     @test length(lib_tracker.groups) == 2
     @test captured == pc_set("B9 A8", env)
 
@@ -230,8 +232,8 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         X........
     """ * repeat(EMPTY_ROW, 7), env)
 
-    lib_tracker = go.from_board(board, env)
-    captured = go.add_stone!(lib_tracker, BLACK, from_kgs("B8", env), env)
+    lib_tracker = from_board(board, env)
+    captured = add_stone!(lib_tracker, BLACK, from_kgs("B8", env), env)
     @test length(lib_tracker.groups) == 1
     sole_group_id = lib_tracker.group_index[from_kgs("A9", env)...]
     sole_group = lib_tracker.groups[sole_group_id]
@@ -246,8 +248,8 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         X........
     """ * repeat(EMPTY_ROW, 7), env)
 
-    lib_tracker = go.from_board(board, env)
-    captured = go.add_stone!(lib_tracker, WHITE, from_kgs("B8", env), env)
+    lib_tracker = from_board(board, env)
+    captured = add_stone!(lib_tracker, WHITE, from_kgs("B8", env), env)
     @test length(lib_tracker.groups) == 2
     black_group = lib_tracker.groups[lib_tracker.group_index[from_kgs("A9", env)...]]
     @test black_group.stones == pc_set("A9 B9 A8", env)
@@ -279,7 +281,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent = [PlayerMove(BLACK, nothing)],
         to_play = WHITE
     )
-    pass_position = go.pass_move!(start_position)
+    pass_position = pass_move!(start_position)
     @test assertEqualPositions(pass_position, expected_position)
   end
 
@@ -302,7 +304,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent = Vector{PlayerMove}(),
         to_play = WHITE
     )
-    flip_position = go.flip_playerturn!(start_position)
+    flip_position = flip_playerturn!(start_position)
     @test assertEqualPositions(flip_position, expected_position)
   end
 
@@ -326,11 +328,11 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
     nonsuicidal_moves = pc_set("B5 J1 A9", env)
     for move in suicidal_moves
       @test position.board[move...] == EMPTY #sanity check my coordinate input
-      @test go.is_move_suicidal(position, move) ? true : throw(AssertionError(string(move)))
+      @test is_move_suicidal(position, move) ? true : throw(AssertionError(string(move)))
     end
     for move in nonsuicidal_moves
       @test position.board[move...] == EMPTY # sanity check my coordinate input
-      @test !go.is_move_suicidal(position, move) ? true : throw(AssertionError(string(move)))
+      @test !is_move_suicidal(position, move) ? true : throw(AssertionError(string(move)))
     end
   end
 
@@ -352,27 +354,27 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
     illegal_moves = pc_set("A9 E9 J9", env)
     legal_moves = pc_set("A4 G1 J1 H7", env)
     for move in illegal_moves
-      @test !go.is_move_legal(position, move)
+      @test !is_move_legal(position, move)
     end
     for move in legal_moves
-      @test go.is_move_legal(position, move)
+      @test is_move_legal(position, move)
     end
     # check that the bulk legal test agrees with move-by-move illegal test.
-    bulk_legality = go.all_legal_moves(position)
+    bulk_legality = all_legal_moves(position)
     for (i, bulk_legal) in enumerate(bulk_legality)
-      @test go.is_move_legal(position, go.from_flat(i, env)) == bulk_legal
+      @test is_move_legal(position, from_flat(i, env)) == bulk_legal
     end
     # flip the colors and check that everything is still (il)legal
     position = GoPosition(env,board = -board, to_play = WHITE)
     for move in illegal_moves
-      @test !go.is_move_legal(position, move)
+      @test !is_move_legal(position, move)
     end
     for move in legal_moves
-      @test go.is_move_legal(position, move)
+      @test is_move_legal(position, move)
     end
-    bulk_legality = go.all_legal_moves(position)
+    bulk_legality = all_legal_moves(position)
     for (i, bulk_legal) in enumerate(bulk_legality)
-      @test go.is_move_legal(position, go.from_flat(i, env)) == bulk_legal
+      @test is_move_legal(position, from_flat(i, env)) == bulk_legal
     end
   end
 
@@ -399,7 +401,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent=[PlayerMove(BLACK, from_kgs("C9", env))],
         to_play = WHITE
     )
-    actual_position = go.play_move!(start_position, from_kgs("C9", env))
+    actual_position = play_move!(start_position, from_kgs("C9", env))
     @test assertEqualPositions(actual_position, expected_position)
 
     expected_board2 = load_board("""
@@ -415,7 +417,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent = [PlayerMove(BLACK, from_kgs("C9", env)), PlayerMove(WHITE, from_kgs("J8", env))],
         to_play = BLACK
     )
-    actual_position2 = go.play_move!(actual_position, from_kgs("J8", env))
+    actual_position2 = play_move!(actual_position, from_kgs("J8", env))
     @test assertEqualPositions(actual_position2, expected_position2)
   end
 
@@ -450,7 +452,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent = Vector{PlayerMove}([PlayerMove(BLACK, from_kgs("B2", env))]),
         to_play = WHITE
     )
-    actual_position = go.play_move!(start_position, from_kgs("B2", env))
+    actual_position = play_move!(start_position, from_kgs("B2", env))
     @test assertEqualPositions(actual_position, expected_position)
   end
 
@@ -481,13 +483,13 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         recent = Vector{PlayerMove}([PlayerMove(BLACK, from_kgs("A9", env))]),
         to_play = WHITE
     )
-    actual_position = go.play_move!(start_position, from_kgs("A9", env))
+    actual_position = play_move!(start_position, from_kgs("A9", env))
     @test assertEqualPositions(actual_position, expected_position)
 
     # Check that retaking ko is illegal until two intervening moves
-    @test_throws go.IllegalMove go.play_move!(actual_position, from_kgs("B9", env))
-    pass_twice = go.pass_move!(go.pass_move!(actual_position))
-    ko_delayed_retake = go.play_move!(pass_twice, from_kgs("B9", env))
+    @test_throws IllegalMove play_move!(actual_position, from_kgs("B9", env))
+    pass_twice = pass_move!(pass_move!(actual_position))
+    ko_delayed_retake = play_move!(pass_twice, from_kgs("B9", env))
     expected_position = GoPosition(env,
         board = start_board,
         n = 4,
@@ -508,9 +510,9 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
   @testset "is_game_over" begin
     root = GoPosition(env)
     @test !root.done
-    first_pass = go.play_move!(root, nothing)
+    first_pass = play_move!(root, nothing)
     @test !first_pass.done
-    second_pass = go.play_move!(first_pass, nothing)
+    second_pass = play_move!(first_pass, nothing)
     @test second_pass.done
   end
 
@@ -536,7 +538,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         to_play = BLACK
     )
     expected_score = 1.5
-    @test go.score(position) == expected_score
+    @test score(position) == expected_score
 
     board = load_board("""
         XXX......
@@ -559,6 +561,6 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
         to_play = WHITE
     )
     expected_score = 2.5
-    @test go.score(position) == expected_score
+    @test score(position) == expected_score
   end
 end

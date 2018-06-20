@@ -1,6 +1,5 @@
 using  AlphaGo
-using AlphaGo.go
-using AlphaGo.go: PlayerMove, Position, BLACK, WHITE
+using AlphaGo: PlayerMove, GoPosition, BLACK, WHITE, to_flat, from_kgs
 using AlphaGo: MCTSNode, select_leaf, incorporate_results!, maybe_add_child!,
                inject_noise!, child_action_score, N, Q, child_Q, set_N!,
                add_virtual_loss!
@@ -9,8 +8,7 @@ using Base.Test
 include("test_utils.jl")
 
 @testset "MCTS" begin
-  set_all_params(9)
-
+  env = GoEnv(9)
   ALMOST_DONE_BOARD = load_board("""
                                 .XO.XO.OO
                                 X.XXOOOO.
@@ -21,9 +19,9 @@ include("test_utils.jl")
                                 .XXXXOOO.
                                 XXXXXOOOO
                                 XXXXOOOOO
-                                """)
+                                """, env)
 
-  TEST_POSITION = Position(
+  TEST_POSITION = Position(env,
       board = ALMOST_DONE_BOARD,
       n = 105,
       komi = 2.5,
@@ -33,7 +31,7 @@ include("test_utils.jl")
               PlayerMove(WHITE, (1, 9))],
       to_play = BLACK);
 
-  SEND_TWO_RETURN_ONE = Position(
+  SEND_TWO_RETURN_ONE = Position(env,
       board = ALMOST_DONE_BOARD,
       n = 75,
       komi =  0.5,
@@ -46,10 +44,10 @@ include("test_utils.jl")
 
   @testset "action_flipping" begin
     srand(1)
-    probs = 0.02 * ones(go.N ^ 2 + 1)
-    probs = probs + rand(go.N ^ 2 + 1) * 0.001
-    black_root = MCTSNode(Position())
-    white_root = MCTSNode(Position(to_play = WHITE))
+    probs = 0.02 * ones(env.N ^ 2 + 1)
+    probs = probs + rand(env.N ^ 2 + 1) * 0.001
+    black_root = MCTSNode(Position(env,))
+    white_root = MCTSNode(Position(env,to_play = WHITE))
     incorporate_results!(select_leaf(black_root), probs, 0, black_root)
     incorporate_results!(select_leaf(white_root), probs, 0, white_root)
     # No matter who is to play, when we know nothing else, the priors
@@ -61,8 +59,8 @@ include("test_utils.jl")
   end
 
   @testset "select_leaf" begin
-    flattened = go.to_flat(go.from_kgs("D9"))
-    probs = 0.02 * ones(go.N ^ 2 + 1)
+    flattened = to_flat(from_kgs("D9", env), env)
+    probs = 0.02 * ones(env.N ^ 2 + 1)
     probs[flattened] = 0.4
     root = MCTSNode(SEND_TWO_RETURN_ONE)
     incorporate_results!(select_leaf(root), probs, 0, root)
@@ -72,7 +70,7 @@ include("test_utils.jl")
   end
 
   @testset "backup_incorporate_results" begin
-    probs = 0.02 * ones(go.N ^ 2 + 1)
+    probs = 0.02 * ones(env.N ^ 2 + 1)
     root = MCTSNode(SEND_TWO_RETURN_ONE)
     incorporate_results!(select_leaf(root), probs, 0, root)
 
@@ -116,12 +114,12 @@ include("test_utils.jl")
   end
 
   @testset "do_not_explore_past_finish" begin
-    probs = 0.02 * ones(Float32, go.N ^ 2 + 1)
-    root = MCTSNode(Position())
+    probs = 0.02 * ones(Float32, env.N ^ 2 + 1)
+    root = MCTSNode(Position(env,))
     incorporate_results!(select_leaf(root), probs, 0, root)
-    first_pass = maybe_add_child!(root, go.to_flat(nothing))
+    first_pass = maybe_add_child!(root, to_flat(nothing, env))
     incorporate_results!(first_pass, probs, 0, root)
-    second_pass = maybe_add_child!(first_pass, go.to_flat(nothing))
+    second_pass = maybe_add_child!(first_pass, to_flat(nothing, env))
     @test_throws AssertionError incorporate_results!(second_pass, probs, 0, root)
     node_to_explore = select_leaf(second_pass)
     # should just stop exploring at the end position.
@@ -129,7 +127,7 @@ include("test_utils.jl")
   end
 
   @testset "add_child" begin
-    root = MCTSNode(Position())
+    root = MCTSNode(Position(env,))
     child = maybe_add_child!(root, 17)
     @test 17 ∈ keys(root.children)
     @test child.parent == root
@@ -137,7 +135,7 @@ include("test_utils.jl")
   end
 
   @testset "add_child_idempotency" begin
-    root = MCTSNode(Position())
+    root = MCTSNode(Position(env,))
     child = maybe_add_child!(root, 17)
     current_children = copy(root.children)
     child2 = maybe_add_child!(root, 17)
@@ -146,7 +144,7 @@ include("test_utils.jl")
   end
 
   @testset "never_select_illegal_moves" begin
-    probs = 0.02 * ones(go.N ^ 2 + 1)
+    probs = 0.02 * ones(env.N ^ 2 + 1)
     # let's say the NN were to accidentally put a high weight on an illegal move
     probs[2] = 0.99
     root = MCTSNode(SEND_TWO_RETURN_ONE)
@@ -154,7 +152,7 @@ include("test_utils.jl")
     # and let's say the root were visited a lot of times, which pumps up the
     # action score for unvisited moves...
     set_N!(root, 10000)
-    root.child_N[Bool.(go.all_legal_moves(root.position))] = 10000
+    root.child_N[Bool.(all_legal_moves(root.position))] = 10000
     # this should not throw an error...
     leaf = select_leaf(root)
     # the returned leaf should not be the illegal move
@@ -169,11 +167,11 @@ include("test_utils.jl")
   end
 
   @testset "dont_pick_unexpanded_child" begin
-    probs = 0.02 * ones(go.N ^ 2 + 1)
+    probs = 0.02 * ones(env.N ^ 2 + 1)
     # make one move really likely so that tree search goes down that path twice
     # even with a virtual loss
     probs[18] = 0.999
-    root = MCTSNode(Position())
+    root = MCTSNode(Position(env,))
     incorporate_results!(root, probs, 0, root)
     leaf1 = select_leaf(root)
     @test leaf1.fmove == 18

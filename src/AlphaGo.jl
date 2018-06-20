@@ -6,12 +6,18 @@ using Flux
 using Flux: crossentropy, back!, mse
 using StatsBase: Weights
 
+struct IllegalMove <:Exception end
+abstract type Position end
+abstract type GameEnv end
+
 export MCTSPlayer, NeuralNet, pick_move, play_move!,
       initialize_game!, extract_data, set_result!,
       should_resign, is_done, evaluate, result, train!, selfplay,
-      train, play, load_model
+      train, play, load_model, GoEnv, Position, all_legal_moves
 
-include("game/go.jl")
+
+include("game/go/go.jl")
+include("game/env.jl")
 include("mcts.jl")
 include("mcts_play.jl")
 include("features.jl")
@@ -20,13 +26,11 @@ include("selfplay.jl")
 include("train.jl")
 include("play.jl")
 
-using .go
+#function set_all_params(n::Int)
+ # go.set_board_size(n)
+  #set_mcts_params()
+#end
 
-function set_all_params(n::Int)
-  go.set_board_size(n)
-  set_mcts_params()
-end
-
-result(pos::go.Position) = go.result(pos)
+#result(pos::GoPosition) = result(pos)
 
 end
