@@ -11,9 +11,9 @@ mutable struct NeuralNet
   function NeuralNet(;base_net = nothing, value = nothing, policy = nothing,
                           tower_height::Int = 19)
     if base_net == nothing
-      res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
+      res_block() = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
-      tower = tuple(repmat([res_block], tower_height)...)
+      tower = tuple([res_block() for i = 1:tower_height]...)
       base_net = Chain(Conv((3,3), 17=>256, pad=(1,1)), BatchNorm(256, relu),
                         tower...) |> gpu
     end
@@ -45,19 +45,18 @@ function testmode!(nn::NeuralNet, val::Bool=true)
   testmode!(nn.value, val)
 end
 
-function (nn::NeuralNet)(input::Vector{go.Position})
+function (nn::NeuralNet)(input::Vector{go.Position}, train = false)
   nn_in = cat(4, get_feats.(input)...) |> gpu
-  testmode!(nn)
-
+  if !train testmode!(nn) end
   common_out = nn.base_net(nn_in)
   π, val = nn.policy(common_out), nn.value(common_out)
-  testmode!(nn, false)
 
+  if !train testmode!(nn, false) end
   return π, val
 end
 
-function (nn::NeuralNet)(input::go.Position)
-  p, v = nn([input])
+function (nn::NeuralNet)(input::go.Position, train = false)
+  p, v = nn([input], train)
   return p[:, 1], v[1]
 end
 
@@ -65,20 +64,28 @@ loss_π(π, p) = crossentropy(p, π; weight = 0.01f0)
 
 loss_value(z, v) = 0.01f0 * mse(z, v)
 
-loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
-                           sum(vecnorm, params(nn.value)) +
-                           sum(vecnorm, params(nn.policy)))
-
-function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}})
-  positions = input_data[1]
-  π, z = input_data[2:3] |> gpu
-  p, v = nn(positions)
-  loss = loss_π(π, p) + loss_value(z, v) #+ loss_reg(nn)
-  back!(loss)
-  nn.opt()
-  return loss.tracker.data
+function loss_reg(nn::NeuralNet)
+  sum_sqr(x) = sum([sum(i.^2) for i in x])
+  0.0001f0 * (sum_sqr(params(nn.base_net)) + sum_sqr(params(nn.value)) + sum_sqr(params(nn.policy)))
 end
 
+function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}}; epochs = 16)
+  positions = input_data[1]
+  π, z = input_data[2:3] |> gpu
+  loss_avg = 0
+  data_size = length(position)
+  for i = 1:epochs
+    for j = 1:32:data_size
+      p, v = nn(positions[j:j+31], true)
+      loss = loss_π(π[:, j:j+31], p) + loss_value(z[j:j+31],v) + loss_reg(nn)
+      back!(loss)
+      loss_avg += loss.tracker.data
+      nn.opt()
+    end
+  end
+  return loss / data_size
+end
+#=
 function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, ro = 800)
   games_won = 0
 
@@ -100,8 +107,6 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
      
       current_readouts = N(active.root)
       readouts = active.num_readouts
-
-      while N(active.root) < current_readouts + readouts
         tree_search!(active)
       end
 
@@ -133,4 +138,4 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
   testmode!(white_net, false)
   print("Won $games_won / $num_games. Win rate $(games_won/num_games). ")
   return games_won / num_games ≥ 0.55
-end
+end=#

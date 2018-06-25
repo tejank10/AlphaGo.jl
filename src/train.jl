@@ -1,7 +1,7 @@
 using BSON: @save
 
 function get_replay_batch(pos_buffer, π_buffer, res_buffer; batch_size = 32)
-  idxs = rand(1:length(pos_buffer), batch_size)
+  idxs = sample(1:length(pos_buffer), batch_size, replace=false)
   pos_replay = pos_buffer[idxs]
   π_replay = hcat(π_buffer[idxs]...)
   res_replay = res_buffer[idxs]
@@ -62,17 +62,14 @@ function train(; num_iters = 10000, num_games::Int = 25000, memory_size::Int = 5
         π_buffer = π_buffer[end-memory_size+1:end]
         res_buffer = res_buffer[end-memory_size+1:end]
       end
+      
+      if length(pos_buffer) >= 1024
+        println(length(pos_buffer))
+        replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer; batch_size=1024)
+        loss = train!(cur_nn, (replay_pos, replay_π, replay_res))
+        println("Episode $((iter-1)*25+i) over. Loss: $loss ")
+      end
     end
-    
-    num_epoch = min(128, length(pos_buffer) ÷ 32)
-    loss = 0
-    for epoch = 1:num_epoch
-      replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer)
-      loss += train!(cur_nn, (replay_pos, replay_π, replay_res))
-    end
-
-    println("Episode $iter over. Loss: $(loss/num_epoch) ")
-
 #    cur_is_winner = evaluate(cur_nn, prev_nn; num_games = eval_games, ro = readouts)
  #   print("Evaluated. ")
   #  if cur_is_winner
@@ -82,7 +79,7 @@ function train(; num_iters = 10000, num_games::Int = 25000, memory_size::Int = 5
      # cur_nn = deepcopy(prev_nn)
      # print("Model retained. ")
    # end
-    
+        
     if iter % eval_freq == 0
       save_model(cur_nn, iter)
       print("Model saved. ")
