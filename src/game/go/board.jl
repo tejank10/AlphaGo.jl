@@ -553,12 +553,6 @@ function result_string(pos::GoPosition)
   end
 end
 
-struct PositionWithContext
-  position::GoPosition
-  next_move
-  result::Int
-end
-
 function replay_position(pos::GoPosition, result)
   #=
   Wrapper for a go.GoPosition which replays its history.

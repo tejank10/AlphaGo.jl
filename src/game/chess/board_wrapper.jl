@@ -1,48 +1,27 @@
-import Base: -
-
-function -(b1::Board, b2::Board)
-  white_pieces = b1.white_pieces - b2.white_pieces
-  black_pieces = b1.black_pieces - b2.black_pieces
-  kings = b1.kings - b2.kings
-  queens = b1.queens - b2.queens
-  rooks = b1.rooks - b2.rooks
-  bishops = b1.bishops - b2.bishops
-  knights = b1.knights - b2.knights
-  pawns = b1.pawns - b2.pawns
-  side_to_move = b1.side_to_move - b2.side_to_move
-  castling_rights = b1.castling_moves - b2.castling_rights
-  last_move_pawn_double_push = b1.last_move_pawn_double_push - b2.last_move_pawn_double_push
-
-  game_chess960 = b1.game_chess960 $ b2.game_chess960
-  game_kings_starting_column = b1.game_kings_starting_column - b2.game_kings_starting_column
-  game_queen_rook_starting_column = b1.game_queen_rook_starting_column - b2.game_queen_rook_starting_column
-  game_king_rook_starting_column = b1.game_king_rook_starting_column - b2.game_king_rook_starting_column
-  game_zobrist = b1.game_zobrist - b2.game_zobrist
-  game_movelist = b1.game_movelist - b2.game_movelist
-
-  Board(white_pieces, black_pieces, kings, queens, rooks, bishops, knights, pawns,
-   side_to_move, castling_rights, last_move_pawn_double_push, game_chess960,
-   game_kings_starting_column, game_queen_rook_starting_column,
-   game_king_rook_starting_column, game_zobrist, game_movelist)
-end
-
 mutable ChessPosition <: Position
   env::ChessEnv
   board::Board
   n::Int
   score::Float32
-  recent::Vector{PlayerMove}
-  board_deltas::Array{Board, 3}
+  recent::Vector{Move}
+  history::Array{Board, 3}
   to_play::UInt8
   done::Bool
 
   function ChessPosition(env::ChessEnv; board = nothing, n = 0,
-    recent = Vector{PlayerMove}(), board_deltas = nothing, to_play = NONE)
+    recent = Vector{Move}(), board_deltas = nothing, to_play = NONE)
 
     b = board != nothing ? board : Board()
     bd = board_deltas != nothing ? board_deltas : zeros(Int8, env.N, env.N, 0)
     new(env, b, n, komi, caps, lib_trac, ko, recent, bd, to_play, false)
   end
+end
+
+get_first_n(x::Array{Board, 3}, n) = size(x, 3) < n ? x : x[:, :, 1:n]
+
+function is_move_legal(pos::ChessPosition, c)
+  moves = generate_moves(pos)
+  c in moves
 end
 
 function all_legal_moves(pos::ChessPosition)
@@ -52,4 +31,71 @@ function all_legal_moves(pos::ChessPosition)
     flat_moves[to_flat(move)] = 1
   end
   return flat_moves
+end
+
+function play_move!(pos::ChessPosition, c::Move; mutate=false)
+  new_pos = mutate ? deepcopy(pos) : pos
+
+  @assert !new_pos.done
+
+  if !is_move_legal(pos, c)
+    throw(IllegalMove())
+  end
+
+  prev_pos = deepcopy(pos)
+  make_move!(new_pos, c)
+  opp_color = -pos.to_play
+
+  new_pos.n += 1
+  push!(new_pos.recent, c)
+  # keep a rolling history of last 7 positions - that's all we'll need to
+  # extract the last 8 board states.
+
+  new_pos.history = vcat(prev_pos, get_first_n(new_pos.history, 6))
+  new_pos.to_play *= -1
+  return new_pos
+end
+
+function result(pos::ChessPosition)
+  moves = generate_moves(board)
+  if number_of_moves(board.game_movelist)==0
+    if is_king_in_check(board)
+      return pos.to_play $ 3
+    else
+      return NONE # Draw game
+    end
+  end
+  return -1 # Implies the game has not ended
+end
+
+function result_string(pos::ChessPosition)
+  res = result(pos)
+  if result == Chess.BLACK
+    return "BLACK"
+  elseif result == Chess.WHITE
+    return "WHITE"
+  end
+  return "DRAW"
+end
+
+function replay_position(pos::ChessPosition, result)
+  #=
+  Wrapper for a Position which replays its history.
+  Assumes an empty start position! (i.e. no handicap, and history must be exhaustive.)
+
+  Result must be passed in, since a resign cannot be inferred from position
+  history alone.
+
+  for position_w_context in replay_position(position):
+    print(position_w_context.position)
+  =#
+  pos.n == length(pos.recent) ? nothing : throw(AssertionError("Position history is incomplete"))
+  replay_buffer = Vector{PositionWithContext}()
+  dummy_pos = Position(pos.env)
+
+  for player_move in pos.recent
+    push!(replay_buffer, PositionWithContext(dummy_pos, player_move, result))
+    dummy_pos = play_move!(dummy_pos, player_move, color = color)
+  end
+  return replay_buffer
 end

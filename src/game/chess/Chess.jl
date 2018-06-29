@@ -82,7 +82,7 @@ end
 
 test_movelist()
 
-export WHITE, BLACK
+#export WHITE, BLACK
 export KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
 export A, B, C, D, E, F, G, H
 export square

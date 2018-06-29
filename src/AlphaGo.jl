@@ -10,6 +10,12 @@ struct IllegalMove <:Exception end
 abstract type Position end
 abstract type GameEnv end
 
+struct PositionWithContext
+  position::Position
+  next_move
+  result::Int
+end
+
 export MCTSPlayer, NeuralNet, pick_move, play_move!,
       initialize_game!, extract_data, set_result!,
       should_resign, is_done, evaluate, result, train!, selfplay,
@@ -17,6 +23,7 @@ export MCTSPlayer, NeuralNet, pick_move, play_move!,
 
 
 include("game/go/go.jl")
+include("game/go/chess_wrapper.jl")
 include("game/env.jl")
 include("mcts.jl")
 include("mcts_play.jl")

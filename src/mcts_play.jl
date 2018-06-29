@@ -75,7 +75,7 @@ function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)
     leaf = select_leaf(mcts_player.root)
     # if game is over, override the value estimate with the true score
     if is_done(leaf)
-      value = score(leaf.position) > 0 ? 1 : -1
+      value = result(leaf.position)
       backup_value!(leaf, value, mcts_player.root)
       continue
     end
