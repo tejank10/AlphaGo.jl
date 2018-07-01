@@ -22,7 +22,7 @@ end
 
 
 # Plays with user
-function play(nn = nothing; tower_height = 19, num_readouts = 800)
+function play(nn = nothing; tower_height = 19, num_readouts = 800, mode = 0) #mode=0, human starts with black, else starts with white
   @assert 0 ≤ tower_height ≤ 19
 
   if nn == nothing
@@ -34,10 +34,11 @@ function play(nn = nothing; tower_height = 19, num_readouts = 800)
   initialize_game!(agz)
   num_moves = 0
 
+  mode = mode == 0 ? mode : 1
   while !is_done(agz)
     print(agz.root.position)
 
-    if num_moves % 2 == 0
+    if num_moves % 2 == mode
       print("Your turn: ")
       move = readline(STDIN)
       try
