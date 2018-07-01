@@ -27,7 +27,7 @@ mutable struct NeuralNet
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
-    opt = ADAM(all_params, 0.2)
+    opt = Momentum(all_params, 0.02)
     new(base_net, value, policy, opt)
   end
 end
@@ -46,11 +46,10 @@ function testmode!(nn::NeuralNet, val::Bool=true)
 end
 
 function (nn::NeuralNet)(input::Vector{go.Position}, train = false)
-  nn_in = cat(4, get_feats.(input)...) |> gpu
+  nn_in = cat(4, get_feats.(input)...)
   if !train testmode!(nn) end
-  common_out = nn.base_net(nn_in)
+  common_out = nn.base_net(nn_in |> gpu)
   π, val = nn.policy(common_out), nn.value(common_out)
-
   if !train testmode!(nn, false) end
   return π, val
 end
@@ -69,21 +68,23 @@ function loss_reg(nn::NeuralNet)
   0.0001f0 * (sum_sqr(params(nn.base_net)) + sum_sqr(params(nn.value)) + sum_sqr(params(nn.policy)))
 end
 
-function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}}; epochs = 16)
+function train!(nn::NeuralNet, input_data::Tuple{Vector{go.Position}, Matrix{Float32}, Vector{Int}}; epochs = 1)
   positions = input_data[1]
-  π, z = input_data[2:3] |> gpu
-  loss_avg = 0
-  data_size = length(position)
+  π, z = input_data[2:3]
+  loss_avg = 0.0
+  data_size = length(z)
   for i = 1:epochs
     for j = 1:32:data_size
       p, v = nn(positions[j:j+31], true)
-      loss = loss_π(π[:, j:j+31], p) + loss_value(z[j:j+31],v) + loss_reg(nn)
+      println(v[1:5:end], z[1:5:end])
+      loss = loss_π(cu(π[:, j:j+31]), p) + loss_value(cu(z[j:j+31]),v) + loss_reg(nn)
+      println(loss_π(cu(π[:, j:j+31]), p) ," ",loss_value(cu(z[j:j+31]),v) ," ",loss_reg(nn))
       back!(loss)
       loss_avg += loss.tracker.data
       nn.opt()
     end
   end
-  return loss / data_size
+  return loss_avg / epochs
 end
 #=
 function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, ro = 800)

@@ -53,17 +53,17 @@ function pick_move(mcts_player::MCTSPlayer)
 
   Highest N is most robust indicator. In the early stage of the game, pick
   a move weighted by visit count; later on, pick the absolute max. =#
+  
   if mcts_player.root.position.n >= mcts_player.τ_threshold
-    max_val = maximum(mcts_player.root.child_N)
-    possible_moves = find(x->x == max_val, mcts_player.root.child_N)
-    fcoord = findmax(mcts_player.root.child_N)[2]#possible_moves[1]
+    #max_val = maximum(mcts_player.root.child_N)
+    #possible_moves = find(x -> x == max_val, mcts_player.root.child_N)
+    #fcoord = sample(possible_moves)
+    fcoord = findmax(mcts_player.root.child_N)[2]
   else
-    #π = children_as_π(mcts_player.root, true)
     cdf = cumsum(mcts_player.root.child_N)
     cdf /= cdf[end - 1]  # Prevents passing via softpick.
     selection = rand()
     fcoord = searchsortedfirst(cdf, selection)
-    #fcoord = sample(1:length(π), Weights(π))
     @assert mcts_player.root.child_N[fcoord] != 0
   end
   return go.from_flat(fcoord)
@@ -99,13 +99,11 @@ end
 function set_result!(mcts_player::MCTSPlayer, winner, was_resign)
   mcts_player.result = winner
   if was_resign
-    string = winner == go.BLACK ? "B+R" : "W+R"
+    str = winner == go.BLACK ? "B+R" : "W+R"
   else
-    string = go.result_string(mcts_player.root.position)
-    mcts_player.result = string[1] == 'B' ? go.BLACK :
-                                              (string[1] == 'W' ? go.WHITE : 0)
+    str = go.result_string(mcts_player.root.position)
   end
-  mcts_player.result_string = string
+  mcts_player.result_string = str
 end
 
 function initialize_game!(mcts_player::MCTSPlayer, pos = go.Position())
@@ -119,16 +117,7 @@ is_done(mcts_player::MCTSPlayer) = mcts_player.result != 0 || is_done(mcts_playe
 
 # Returns true if the player resigned.  No further moves should be played
 
-function should_resign(mcts_player::MCTSPlayer)
-  sr1 = Q_perspective(mcts_player.root) < mcts_player.resign_threshold
-  #best_child = nothing
-  #for k in keys(mcts_player.root.children)
-  #  if best_child == nothing best_child = Q_perspective(mcts_player.root.children[k]) end
-  #  best_child = max(Q_perspective(mcts_player.root.children[k]), best_child)
-  #end
-  sr2 = 1 #best_child < mcts_player.resign_threshold
-  sr1 & sr2
-end
+should_resign(mcts_player::MCTSPlayer) = Q_perspective(mcts_player.root) < mcts_player.resign_threshold
 
 function extract_data(mcts_player::MCTSPlayer)
   @assert length(mcts_player.searches_π) == mcts_player.root.position.n

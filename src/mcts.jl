@@ -8,7 +8,7 @@ using DataStructures: DefaultDict
 using Distributions: Dirichlet
 
 # Exploration constant balancing priors vs. value net output
-c_puct = 1.38
+c_puct = 0.96
 # How much to weight the priors vs. dirichlet noise when mixing
 dirichlet_noise_weight = 0.25
 
@@ -118,11 +118,10 @@ function select_leaf(mcts_node::MCTSNode)
       current = maybe_add_child!(current, pass_move)
       continue
 		end
-    #mask = Bool.(legal_moves(current))
     cas = child_action_score(current)
-   # if rand() < 0.1 println(mcts_node.position.to_play, cas) end
-    #max_score = maximum(cas[mask])
-    #possible_moves = find(x -> x == max_score, cas) ∩ find(x -> x == true, mask)
+    #max_score = maximum(cas)
+    #possible_moves = find(x -> x == max_score, cas)
+    #best_move = sample(possible_moves)
     best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
 	end

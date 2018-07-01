@@ -1,24 +1,25 @@
 using BSON: @load
 
-function load_model(model_path)
-  @load model_path bn
-  @load model_path value
-  @load model_path policy
+function load_model(str)
+  @load str*"/agz_base.bson" bn
+  @load str*"/agz_value.bson" value
+  @load str*"/agz_policy.bson" policy
 
-  @load model_path bn_weights
-  @load model_path val_weights
-  @load model_path pol_weights
+  @load  str*"/weights/agz_base.bson" bn_weights
+  @load str*"/weights/agz_value.bson" val_weights
+  @load str*"/weights/agz_policy.bson" pol_weights
 
-  Flux.loadparams!(bn,bn_weights)
+  Flux.loadparams!(bn, bn_weights)
   Flux.loadparams!(value, val_weights)
   Flux.loadparams!(policy, pol_weights)
+                
+  bn=mapleaves(cu, bn)
+  val = mapleaves(cu, value)
+  pol = mapleaves(cu, policy)
 
-  bn = mapleaves(cu, bn)
-  value = mapleaves(cu, value)
-  policy = mapleaves(cu, policy)
-
-  agz_nn = NeuralNet(base_net = bn, value = value, policy = policy)
+  NeuralNet(; base_net=bn, value=val, policy=pol)
 end
+
 
 # Plays with user
 function play(nn = nothing; tower_height = 19, num_readouts = 800)
@@ -42,7 +43,7 @@ function play(nn = nothing; tower_height = 19, num_readouts = 800)
       try
       	move = go.from_kgs(move)
       catch
-        println("Illegal move! Trye again.")
+        println("Illegal move! Try again.")
       end
     else
       print("AGZ's turn: ")
@@ -60,8 +61,6 @@ function play(nn = nothing; tower_height = 19, num_readouts = 800)
       num_moves += 1
     end
   end
-
-  println("GAME OVER")
 
   winner = go.result(agz.root.position)
   set_result!(agz, winner, false)
