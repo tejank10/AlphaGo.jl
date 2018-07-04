@@ -1,7 +1,7 @@
 # board.jl
 
 
-type Board   # known as "dense Board representation"
+mutable struct Board   # known as "dense Board representation"
     white_pieces::UInt64
     black_pieces::UInt64
     kings::UInt64

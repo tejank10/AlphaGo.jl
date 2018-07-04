@@ -2,12 +2,12 @@ _KGS_COLUMNS = "ABCDEFGHJKLMNOPQRST"
 _SGF_COLUMNS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # Converts from a board coordinate to a flattened coordinate
-to_flat(coord, env::GoEnv) = coord == nothing ? env.N * env.N + 1 :
-                                  env.N * (coord[2] - 1) + coord[1]
+to_flat(coord, pos::GoPosition) = coord == nothing ? pos.env.N * pos.env.N + 1 :
+                                  pos.env.N * (coord[2] - 1) + coord[1]
 
 # Converts from a flattened coordinate to a board coordinate
-from_flat(f, env) = f == env.N * env.N + 1 ? nothing :
-                        tuple([i + 1 for i in reverse(divrem(f - 1, env.N))]...)
+from_flat(f, pos::GoPosition) = f == pos.env.N * pos.env.N + 1 ? nothing :
+                        tuple([i + 1 for i in reverse(divrem(f - 1, pos.env.N))]...)
 
 function from_sgf(sgfc)
   # Interprets coords. aa is top left corner; sa is top right corner

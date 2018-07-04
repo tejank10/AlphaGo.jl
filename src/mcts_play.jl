@@ -33,12 +33,11 @@ function play_move!(mcts_player::MCTSPlayer, c)
   =#
   if !mcts_player.two_player_mode
     push!(mcts_player.searches_π, children_as_π(mcts_player.root,
-    mcts_player.root.position.n <= mcts_player.τ_threshold))
+    mcts_player.root.position.n ≤ mcts_player.τ_threshold))
   end
   push!(mcts_player.qs, Q(mcts_player.root))  # Save our resulting Q.
   try
-    env = mcts_player.root.position.env
-    mcts_player.root = maybe_add_child!(mcts_player.root, to_flat(c, env))
+    mcts_player.root = maybe_add_child!(mcts_player.root, to_flat(c, mcts_player.root.position))
   catch IllegalMove
     println("Illegal move")
     if !mcts_player.two_player_mode pop!(mcts_player.searches_π) end
@@ -55,16 +54,16 @@ function pick_move(mcts_player::MCTSPlayer)
 
   Highest N is most robust indicator. In the early stage of the game, pick
   a move weighted by visit count; later on, pick the absolute max. =#
-  if mcts_player.root.position.n >= mcts_player.τ_threshold
-    max_val = maximum(mcts_player.root.child_N)
-    possible_moves = find(x->x == max_val, mcts_player.root.child_N)
-    fcoord = sample(possible_moves)
+  if mcts_player.root.position.n ≥ mcts_player.τ_threshold
+    fcoord = findmax(mcts_player.root.child_N)[2]
   else
-    π = children_as_π(mcts_player.root, true)
-    fcoord = sample(1:length(π), Weights(π))
+    cdf = cumsum(mcts_player.root.child_N)
+    cdf /= cdf[end]  # Prevents passing via softpick if end - 1 is used
+    selection = rand()
+    fcoord = searchsortedfirst(cdf, selection)
     @assert mcts_player.root.child_N[fcoord] != 0
   end
-  return from_flat(fcoord, mcts_player.env)
+  return from_flat(fcoord, mcts_player.root.position)
 end
 
 function tree_search!(mcts_player::MCTSPlayer, parallel_readouts = 8)

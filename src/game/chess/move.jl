@@ -1,7 +1,7 @@
 # move.jl
 
 
-type Move
+mutable struct Move
     color_moving::UInt8
     piece_moving::UInt8
     sqr_src::UInt64

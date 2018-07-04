@@ -14,7 +14,7 @@ mutable struct NeuralNet
       res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
       tower = tuple(repmat([res_block], tower_height)...)
-      base_net = Chain(Conv((3,3), 17=>256, pad=(1,1)), BatchNorm(256, relu),
+      base_net = Chain(Conv((3,3), env.planes=>256, pad=(1,1)), BatchNorm(256, relu),
                         tower...) |> gpu
     end
     if value == nothing
@@ -23,7 +23,7 @@ mutable struct NeuralNet
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2env.N*env.N, env.N*env.N+1), x -> softmax(x)) |> gpu
+                      Dense(2env.N*env.N, env.action_space), x -> softmax(x)) |> gpu
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
@@ -45,7 +45,7 @@ function testmode!(nn::NeuralNet, val::Bool=true)
   testmode!(nn.value, val)
 end
 
-function (nn::NeuralNet)(input::Vector{Position})
+function (nn::NeuralNet)(input::Vector{T}) where T <: Position
   nn_in = cat(4, get_feats.(input)...) |> gpu
   testmode!(nn)
 

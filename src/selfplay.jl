@@ -1,4 +1,4 @@
-function selfplay(nn::NeuralNet, num_ro::Int = 800)
+function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
   #= Plays out a self-play match, returning
   - the final position
   - the n x go.N² tensor of floats representing the mcts search probabilities
@@ -12,7 +12,7 @@ function selfplay(nn::NeuralNet, num_ro::Int = 800)
     resign_threshold = -0.9
   end
 
-  player = MCTSPlayer(nn, num_readouts = num_ro, resign_threshold = resign_threshold)
+  player = MCTSPlayer(env, nn, num_readouts = num_ro, resign_threshold = resign_threshold)
 
   readouts = player.num_readouts
   initialize_game!(player)
@@ -22,7 +22,6 @@ function selfplay(nn::NeuralNet, num_ro::Int = 800)
   first_node = select_leaf(player.root)
   prob, val = nn(first_node.position)
   incorporate_results!(first_node, prob.tracker.data, val.tracker.data, first_node)
-
   while true
     inject_noise!(player.root)
     current_readouts = N(player.root)
@@ -38,7 +37,9 @@ function selfplay(nn::NeuralNet, num_ro::Int = 800)
     end
 
     move = pick_move(player)
+    #println(move, to_flat(move, player.root.position))
     play_move!(player, move)
+    println(player.root.position)
     if is_done(player.root)
       set_result!(player, result(player.root.position), false)
       break

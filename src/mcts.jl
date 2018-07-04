@@ -81,7 +81,7 @@ end
 legal_moves(x::MCTSNode) = all_legal_moves(x.position)
 
 child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
-                                            child_U(x)
+                                            child_U(x) - 1000 * (1 - legal_moves(x))
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 + x.child_N)
 
@@ -101,7 +101,6 @@ W(x::MCTSNode) = get_W(x)
 # Return value of position, from perspective of player to play
 Q_perspective(x::MCTSNode) = Q(x) * x.position.to_play
 
-# TODO: select leaf
 function select_leaf(mcts_node::MCTSNode)
   current = mcts_node
   # pass_move = go.N * go.N + 1
@@ -114,17 +113,17 @@ function select_leaf(mcts_node::MCTSNode)
 		end
     # HACK: if last move was a pass, always investigate double-pass first
     # to avoid situations where we auto-lose by passing too early.
-    #if (length(current.position.recent) != 0
-    #  && current.position.recent[end].move == nothing
-    #  && current.child_N[pass_move] == 0)
-    #  current = maybe_add_child!(current, pass_move)
-    #  continue
-		#end
-    mask = Bool.(legal_moves(current))
+    # if (length(current.position.recent) != 0
+    #   && current.position.recent[end].move == nothing
+    #   && current.child_N[pass_move] == 0)
+    #   current = maybe_add_child!(current, pass_move)
+    #   continue
+		# end
     cas = child_action_score(current)
-    max_score = maximum(cas[mask])
-    valid_moves = intersect(find(x -> x == max_score, cas), find(x->x==true, mask))
-    best_move = sample(valid_moves)
+    #max_score = maximum(cas)
+    #possible_moves = find(x -> x == max_score, cas)
+    #best_move = sample(possible_moves)
+    best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
 	end
   return current
@@ -133,7 +132,7 @@ end
 function maybe_add_child!(mcts_node::MCTSNode, fcoord)
   # Adds child node for fcoord if it doesn't already exist, and returns it
   if fcoord ∉ keys(mcts_node.children)
-    new_position = play_move!(mcts_node.position, from_flat(fcoord, mcts_node.position.env))
+    new_position = play_move!(mcts_node.position, from_flat(fcoord, mcts_node.position))
     mcts_node.children[fcoord] = MCTSNode(new_position, fcoord, mcts_node)
 	end
   return mcts_node.children[fcoord]

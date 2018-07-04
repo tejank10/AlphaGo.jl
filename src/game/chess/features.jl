@@ -1,6 +1,4 @@
 # Orientation of the board matters in chess
-get_feats(pos::ChessPosition)
-
 function get_plane(pieces::UInt64)
   plane = zeros(Float32, 8,8)
   for r in 8:-1:1
@@ -12,7 +10,7 @@ function get_plane(pieces::UInt64)
   return plane
 end
 
-function reverse_board!(x::Array{T, 2}) where T
+function reverse_board(x::Array{T, 2}) where T
   @assert size(x, 1) == size(x, 2)
 
   for r = 1:size(x, 1)÷2
@@ -42,12 +40,12 @@ function chess_piece_features(b::Board, to_play)
   black_pieces = [black_king, black_queen, black_knights,
                   black_bishops, black_rooks, black_pawns]
 
-  if to_move == Chess.WHITE
-    return vcat(3, white_pieces..., black_pieces...)
+  if b.side_to_move == Chess.WHITE
+    return cat(3, white_pieces..., black_pieces...)
   else
     white_pieces = reverse_board.(white_pieces)
     black_pieces = reverse_board.(black_pieces)
-    return vcat(3, black_pieces..., white_pieces...)
+    return cat(3, black_pieces..., white_pieces...)
   end
 end
 
@@ -55,11 +53,14 @@ function get_feats(pos::ChessPosition)
   b = deepcopy(pos.board)
   feats = zeros(8,8,97,1)
 
+  avail_history = length(pos.history)
   for i = 1:8
     feats[:,:,(i-1)*12+1:(i-1)*12+12,1] .= chess_piece_features(b, pos.to_play)
-    if i < 8 b = deepcopy(pos.history[i]) end
+    if i ≤ avail_history
+      b = deepcopy(pos.history[i])
+    end
   end
 
   feats[:, :, end, 1] .= pos.to_play * ones(8,8)
-  return feats  
+  return feats
 end

@@ -17,13 +17,14 @@ struct PositionWithContext
 end
 
 export MCTSPlayer, NeuralNet, pick_move, play_move!,
-      initialize_game!, extract_data, set_result!,
-      should_resign, is_done, evaluate, result, train!, selfplay,
-      train, play, load_model, GoEnv, Position, all_legal_moves
+      initialize_game!, set_result!,
+      should_resign, is_done, result, train!, selfplay,
+      train, play, load_model, GoEnv, Position, all_legal_moves,
+      ChessEnv
 
 
 include("game/go/go.jl")
-include("game/go/chess_wrapper.jl")
+include("game/chess/chess_wrapper.jl")
 include("game/env.jl")
 include("mcts.jl")
 include("mcts_play.jl")

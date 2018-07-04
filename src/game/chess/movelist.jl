@@ -4,7 +4,7 @@ const MAX_MOVES_PER_TURN = 100
 const MAX_MOVES_PER_GAME = 1000
 
 # TODO: create my own iteration structure to make the transition easier
-type Movelist
+mutable struct Movelist
     # TODO: make this a solid matrix, not a ragged list, for efficiency
     moves::Array{Array{Move, 1}, 1}  # (MAX_MOVES_PER_GAME x MAX_MOVES_PER_TURN)
     ply_n::UInt16                      # index i into moves
@@ -139,11 +139,11 @@ function get_move(ml::Movelist)
     if ml.ply_move_index[ml.ply_n] > length(ml.moves[ml.ply_n]) ||
         ml.ply_move_index[ml.ply_n] < 1 ||
         ml.ply_n > length(ml.moves)
-        @show ml.ply_n
-        @show ml.ply_move_index
-        @show length(ml.moves[ml.ply_n])
-        println()
-        @show ml
+        #@show ml.ply_n
+        #@show ml.ply_move_index
+        #@show length(ml.moves[ml.ply_n])
+        #println()
+        #@show ml
     end
 
     move = ml.moves[ml.ply_n][ml.ply_move_index[ml.ply_n]]
@@ -164,12 +164,12 @@ function filter_illegal_moves_out!(ml::Movelist, illegal_moves)
     if length(illegal_moves) == 0
         return
     end
-@show illegal_moves
+#@show illegal_moves
     i = 1
     while i <= MAX_MOVES_PER_TURN
         if ml.moves[ml.ply_n][i] ∈ illegal_moves
-            @show i
-            @show ml.moves[ml.ply_n][i]
+            #@show i
+            #@show ml.moves[ml.ply_n][i]
             # copy all moves above this move down one slot
             for j in i+1:MAX_MOVES_PER_TURN
                 ml.moves[ml.ply_n][j-1] = ml.moves[ml.ply_n][j]
