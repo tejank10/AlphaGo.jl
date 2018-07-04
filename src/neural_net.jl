@@ -2,28 +2,28 @@ import Flux.testmode!
 import Base.deepcopy
 
 include("resnet.jl")
-#TODO: gpu
+
 mutable struct NeuralNet
   base_net::Chain
   value::Chain
   policy::Chain
   opt
-  function NeuralNet(;base_net = nothing, value = nothing, policy = nothing,
-                          tower_height::Int = 19)
+  function NeuralNet(env::T; base_net = nothing, value = nothing, policy = nothing,
+                          tower_height::Int = 19) where T <: GameEnv
     if base_net == nothing
       res_block() = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
       tower = tuple([res_block() for i = 1:tower_height]...)
-      base_net = Chain(Conv((3,3), 17=>256, pad=(1,1)), BatchNorm(256, relu),
+      base_net = Chain(Conv((3,3), 17=>256, pad=(1,1)), BatchNorm(256, relu)
                         tower...) |> gpu
     end
     if value == nothing
       value = Chain(Conv((1,1), 256=>1), BatchNorm(1, relu), x->reshape(x, :, size(x, 4)),
-                    Dense(go.N*go.N, 256, relu), Dense(256, 1, tanh)) |> gpu
+                    Dense(env.N*env.N, 256, relu), Dense(256, 1, tanh)) |> gpu
     end
     if policy == nothing
       policy = Chain(Conv((1,1), 256=>2), BatchNorm(2, relu), x->reshape(x, :, size(x, 4)),
-                      Dense(2go.N*go.N, go.N*go.N+1), x -> softmax(x)) |> gpu
+                      Dense(2env.N*env.N, env.action_space), x -> softmax(x)) |> gpu
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
@@ -105,7 +105,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
     while true
       active = num_move % 2 == true ? white : black
       inactive = num_move % 2 == true? black : white
-     
+
       current_readouts = N(active.root)
       readouts = active.num_readouts
         tree_search!(active)
@@ -115,7 +115,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
       if should_resign(active)  # Force resign
         set_result!(active, -active.root.position.to_play, true)
         set_result!(inactive, -active.root.position.to_play, true)
-        println("Finished $i. ", active.result_string)	
+        println("Finished $i. ", active.result_string)
 	break
       end
 
@@ -132,7 +132,7 @@ function evaluate(black_net::NeuralNet, white_net::NeuralNet; num_games = 400, r
 	break
       end
     end
-    games_won += result(black.root.position) == go.BLACK
+    games_won += result(black.root.position) == BLACK
   end
 
   testmode!(black_net, false)
