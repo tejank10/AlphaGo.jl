@@ -1,26 +1,48 @@
 using Flux
 using AlphaGo
 using AlphaGo: select_leaf, incorporate_results!, child_U, inject_noise!,
+<<<<<<< HEAD
                 Q, N, child_Q, initialize_game!, tree_search!, MCTSRules, extract_data
 using AlphaGo: pass_move!, play_move!, PlayerMove, BLACK, WHITE, PlayerMove,
                 to_kgs, score, from_kgs
+=======
+                Q, N, child_Q, initialize_game!
+using AlphaGo.go
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
 using Base.Test
 
 include("test_utils.jl")
 
+<<<<<<< HEAD
+=======
+set_all_params(9)
+
+using AlphaGo: max_game_length
+
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
 struct DummyNet
   fake_priors
   fake_value
 
+<<<<<<< HEAD
   function DummyNet(env; fake_priors = nothing, fake_value = 0)
     if fake_priors == nothing
       fake_priors = ones(env.action_space) / (env.action_space)
+=======
+  function  DummyNet(; fake_priors = nothing, fake_value = 0)
+    if fake_priors == nothing
+      fake_priors = ones(go.N ^ 2 + 1) / (go.N ^ 2 + 1)
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     end
     new(fake_priors, fake_value)
   end
 end
 
+<<<<<<< HEAD
 (dn::DummyNet)(position::Position) = param(dn.fake_priors),
+=======
+(dn::DummyNet)(position::go.Position) = param(dn.fake_priors),
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
                                           param(dn.fake_value)
 
 function (dn::DummyNet)(positions = nothing)
@@ -32,8 +54,11 @@ function (dn::DummyNet)(positions = nothing)
           param(repmat([dn.fake_value], len))
 end
 
+<<<<<<< HEAD
 env = GoEnv(9)
 
+=======
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
 ALMOST_DONE_BOARD = load_board("""
                               .XO.XO.OO
                               X.XXOOOO.
@@ -44,14 +69,21 @@ ALMOST_DONE_BOARD = load_board("""
                               .XXXXOOO.
                               XXXXXOOOO
                               XXXXOOOOO
+<<<<<<< HEAD
                               """, env)
 
 SEND_TWO_RETURN_ONE = Position(env,
+=======
+                              """)
+
+SEND_TWO_RETURN_ONE = go.Position(
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     board = ALMOST_DONE_BOARD,
     n = 70,
     komi = 2.5,
     caps = (1, 4),
     ko = nothing,
+<<<<<<< HEAD
     recent = [PlayerMove(BLACK, (1, 2)),
     PlayerMove(WHITE, (1, 9))],
     to_play = BLACK
@@ -59,6 +91,15 @@ SEND_TWO_RETURN_ONE = Position(env,
 
 function initialize_basic_player(env)
   player = MCTSPlayer(env, DummyNet(env))
+=======
+    recent = [go.PlayerMove(go.BLACK, (1, 2)),
+    go.PlayerMove(go.WHITE, (1, 9))],
+    to_play = go.BLACK
+    );
+
+function initialize_basic_player()
+  player = MCTSPlayer(DummyNet())
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
   initialize_game!(player)
   first_node = select_leaf(player.root)
   p, v = player.network(player.root.position)
@@ -66,12 +107,21 @@ function initialize_basic_player(env)
   return player
 end
 
+<<<<<<< HEAD
 function initialize_almost_done_player(env)
   probs = ones(env.action_space) * 0.001
   probs[3:5] = 0.2  # some legal moves along the top.
   probs[end] = 0.2  # passing is also ok
   net = DummyNet(env; fake_priors = probs)
   player = MCTSPlayer(env, net)
+=======
+function initialize_almost_done_player()
+  probs = ones(go.N * go.N + 1) * 0.001
+  probs[3:5] = 0.2  # some legal moves along the top.
+  probs[end] = 0.2  # passing is also ok
+  net = DummyNet(fake_priors = probs)
+  player = MCTSPlayer(net)
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
   # root position is white to play with no history == white passed.
   initialize_game!(player, SEND_TWO_RETURN_ONE)
   return player
@@ -89,10 +139,17 @@ end
                             .XXOOOOOO
                             X.XXXXXXX
                             XXXXXXXXX
+<<<<<<< HEAD
                             """, env)
 
   @testset "inject_noise" begin
     player = initialize_basic_player(env)
+=======
+                            """)
+
+  @testset "inject_noise" begin
+    player = initialize_basic_player()
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     sum_priors = sum(player.root.child_prior)
     # dummyNet should return normalized priors.
     @test sum_priors ≈ 1
@@ -106,6 +163,7 @@ end
 
     # With dirichelet noise, majority of density should be in one node.
     max_p = maximum(player.root.child_prior)
+<<<<<<< HEAD
     @test max_p > 3 / (env.action_space)
   end
 
@@ -117,6 +175,19 @@ end
     root.child_N[to_flat((4, 1), player.root.position)] = 1
 
     root.position.n = env.action_space  # move 81, or 361, or... Endgame.
+=======
+    @test max_p > 3 / (go.N ^ 2 + 1)
+  end
+
+  @testset "pick_moves" begin
+    player = initialize_basic_player()
+    root = player.root
+    root.child_N[go.to_flat((3, 1))] = 10
+    root.child_N[go.to_flat((2, 1))] = 5
+    root.child_N[go.to_flat((4, 1))] = 1
+
+    root.position.n = go.N ^ 2  # move 81, or 361, or... Endgame.
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
 
     # Assert we're picking deterministically
     @test root.position.n > player.τ_threshold
@@ -138,10 +209,17 @@ end
   end
 
  @testset "dont_pass_if_losing" begin
+<<<<<<< HEAD
     player = initialize_almost_done_player(env)
 
     # check -- white is losing.
     @test score(player.root.position) == -0.5
+=======
+    player = initialize_almost_done_player()
+
+    # check -- white is losing.
+    @test go.score(player.root.position) == -0.5
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
 
     for i = 1:20
       tree_search!(player)
@@ -151,7 +229,11 @@ end
     #println(describe(player.root))
 
     # Search should converge on D9 as only winning move.
+<<<<<<< HEAD
     flattened = to_flat(from_kgs("D9", env), player.root.position)
+=======
+    flattened = go.to_flat(go.from_kgs("D9"))
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     best_move = findmax(player.root.child_N)[2]
     @test best_move == flattened
     # D9 should have a positive value
@@ -166,21 +248,35 @@ end
   end
 
   @testset "parallel_tree_search" begin
+<<<<<<< HEAD
     player = initialize_almost_done_player(env)
     # check -- white is losing.
     @assert score(player.root.position) == -0.5
+=======
+    player = initialize_almost_done_player()
+    # check -- white is losing.
+    @assert go.score(player.root.position) == -0.5
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     # initialize the tree so that the root node has populated children.
     tree_search!(player, 1)
     # virtual losses should enable multiple searches to happen simultaneously
     # without throwing an error...
     for i = 1:6
+<<<<<<< HEAD
       tree_search!(player, 10)
+=======
+      tree_search!(player, 5)
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     end
     # uncomment to debug this test
     # print(player.root.describe())
 
     # Search should converge on D9 as only winning move.
+<<<<<<< HEAD
     flattened = to_flat(from_kgs("D9", env), player.root.position)
+=======
+    flattened = go.to_flat(go.from_kgs("D9"))
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     best_moves = find(x -> x .== maximum(player.root.child_N), player.root.child_N)
     @test flattened ∈ best_moves
     # D9 should have a positive value
@@ -193,7 +289,11 @@ end
   end
 
   @testset "ridiculously_parallel_tree_search" begin
+<<<<<<< HEAD
     player = initialize_almost_done_player(env)
+=======
+    player = initialize_almost_done_player()
+>>>>>>> d1015f1089b81fbc4791f9ed9df20b8704ebdf72
     # Test that an almost complete game
     # will tree search with # parallelism > # legal moves.
     for i = 1:10

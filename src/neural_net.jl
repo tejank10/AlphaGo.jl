@@ -3,11 +3,13 @@ import Base.deepcopy
 
 include("resnet.jl")
 
+
 mutable struct NeuralNet
   base_net::Chain
   value::Chain
   policy::Chain
   opt
+
   function NeuralNet(env::T; base_net = nothing, value = nothing, policy = nothing,
                           tower_height::Int = 19) where T <: GameEnv
     if base_net == nothing
@@ -15,6 +17,7 @@ mutable struct NeuralNet
       # 19 residual blocks
       tower = tuple(repmat([res_block], tower_height)...)
       base_net = Chain(Conv((3,3), env.planes=>256, pad=(1,1)), BatchNorm(256, relu),
+
                         tower...) |> gpu
     end
     if value == nothing
@@ -32,11 +35,13 @@ mutable struct NeuralNet
   end
 end
 
+
 #=
 function deepcopy(nn::NeuralNet)
   base_net = deepcopy(nn.base_net)
   value = deepcopy(nn.value)
   policy = deepcopy(nn.policy)
+
   return NeuralNet(;base_net = base_net, value = value, policy = policy)
 end
 =#
