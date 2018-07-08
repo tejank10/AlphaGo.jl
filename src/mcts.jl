@@ -18,7 +18,7 @@ struct MCTSRules
   dirichlet_noise_alpha::Float32
 
   function MCTSRules(env)
-    max_game_length = (env.N ^ 2 * 2)
+    max_game_length = (env.N ^ 2 * 7) ÷ 5
     dirichlet_noise_alpha = 0.03 * env.max_action_space / env.action_space
     new(max_game_length, dirichlet_noise_alpha)
   end

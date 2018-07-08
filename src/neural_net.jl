@@ -79,7 +79,7 @@ end
 function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}}; epochs = 1)
   positions = input_data[1]
   π, z = input_data[2:3]
-  loss_avg = 0.0
+  loss_avg = 0.0f0
   data_size = length(z)
   for i = 1:epochs
     for j = 1:32:data_size
