@@ -35,7 +35,7 @@ end
 
 function train(env::GameEnv; num_games::Int = 25000, memory_size::Int = 500000,
   batch_size::Int = 32, epochs = 1, ckp_freq::Int = 1000, readouts::Int = 800,
-  tower_height::Int = 19, model = nothing, start_training_after = 32)
+  tower_height::Int = 19, model = nothing, start_training_after = 50000)
 
   # @assert 0 ≤ tower_height ≤ 19
   cur_nn = nothing
