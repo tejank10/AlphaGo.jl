@@ -38,7 +38,7 @@ function play_move!(mcts_player::MCTSPlayer, c)
   push!(mcts_player.qs, Q(mcts_player.root))  # Save our resulting Q.
   try
     mcts_player.root = maybe_add_child!(mcts_player.root, to_flat(c, mcts_player.root.position))
-  catch go.IllegalMove
+  catch IllegalMove
     println("Illegal move")
     if !mcts_player.two_player_mode pop!(mcts_player.searches_π) end
     pop!(mcts_player.qs)

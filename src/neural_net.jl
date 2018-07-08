@@ -70,11 +70,13 @@ loss_π(π, p) = crossentropy(softmax(p), π; weight = 0.01f0)
 
 loss_value(z, v) = 0.01f0 * mse(z, v)
 
-loss_reg(nn::NeuralNet) = 0.0001f0 * (sum(vecnorm, params(nn.base_net)) +
-                           sum(vecnorm, params(nn.value)) +
-                           sum(vecnorm, params(nn.policy)))
 
-function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}})
+function loss_reg(nn::NeuralNet)
+  sum_sqr(x) = sum([sum(i.^2) for i in x])
+   0.0001f0 * (sum_sqr(params(nn.base_net)) + sum_sqr(params(nn.value)) + sum_sqr(params(nn.policy)))
+end
+
+function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}}; epochs = 1)
   positions = input_data[1]
   π, z = input_data[2:3]
   loss_avg = 0.0

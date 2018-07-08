@@ -35,7 +35,7 @@ end
 
 function train(env::GameEnv; num_games::Int = 25000, memory_size::Int = 500000,
   batch_size::Int = 32, epochs = 1, ckp_freq::Int = 1000, readouts::Int = 800,
-  tower_height::Int = 19, model = nothing)
+  tower_height::Int = 19, model = nothing, start_training_after = 32)
 
   # @assert 0 ≤ tower_height ≤ 19
   cur_nn = nothing
@@ -65,7 +65,7 @@ function train(env::GameEnv; num_games::Int = 25000, memory_size::Int = 500000,
       res_buffer = res_buffer[end-memory_size+1:end]
     end
      
-    if length(pos_buffer) >= 1024
+    if length(pos_buffer) >= start_training_after
       replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer; batch_size = batch_size)
       loss = train!(cur_nn, (replay_pos, replay_π, replay_res); epochs = epochs)
       result = player.result_string
