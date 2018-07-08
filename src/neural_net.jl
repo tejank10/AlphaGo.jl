@@ -13,11 +13,10 @@ mutable struct NeuralNet
   function NeuralNet(env::T; base_net = nothing, value = nothing, policy = nothing,
                           tower_height::Int = 19) where T <: GameEnv
     if base_net == nothing
-      res_block = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
+      res_block() = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
-      tower = tuple(repmat([res_block], tower_height)...)
+      tower = [res_block() for i = 1:tower_height]
       base_net = Chain(Conv((3,3), env.planes=>256, pad=(1,1)), BatchNorm(256, relu),
-
                         tower...) |> gpu
     end
     if value == nothing
