@@ -127,7 +127,7 @@ function extract_data(mcts_player::MCTSPlayer)
   @assert length(mcts_player.searches_π) == mcts_player.root.position.n
   @assert mcts_player.result != 0
   positions = Vector{Position}()
-  πs = deepcopy(mcts_player.searches_π)
+  πs = deepcopy.(mcts_player.searches_π)
   results = Vector{Int}()
 
   pwcs = replay_position(mcts_player.root.position, mcts_player.result)
