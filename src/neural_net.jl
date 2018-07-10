@@ -29,7 +29,7 @@ mutable struct NeuralNet
     end
 
     all_params = vcat(params(base_net), params(value), params(policy))
-    opt = ADAM(all_params)
+    opt = Momentum(all_params, 0.02f0)
     new(base_net, value, policy, opt)
   end
 end
@@ -65,7 +65,7 @@ function (nn::NeuralNet)(input::Position)
   return p[:, 1], v[1]
 end
 
-loss_π(π, p) = crossentropy(softmax(p), π; weight = 0.01f0)
+loss_π(π, p) = crossentropy(p, π; weight = 0.01f0)
 
 loss_value(z, v) = 0.01f0 * mse(z, v)
 

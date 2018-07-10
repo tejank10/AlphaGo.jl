@@ -1,35 +1,37 @@
 using BSON: @save
 
 function get_replay_batch(pos_buffer, π_buffer, res_buffer; batch_size = 32)
-  while true
-    shfl = shuffle(1:length(pos_buffer))
-    pos_buffer, π_buffer, res_buffer = pos_buffer[shfl], π_buffer[shfl], res_buffer[shfl]
-    idxs = sample(1:length(pos_buffer), batch_size, replace=false)
-    pos_replay = pos_buffer[idxs]
-    π_replay = hcat(π_buffer[idxs]...)
-    res_replay = res_buffer[idxs]
-    if -5 < sum(res_replay) < 5
-      return pos_replay, π_replay, res_replay
-    end
-  end
+  idxs = sample(1:length(pos_buffer), batch_size, replace=false)
+  pos_replay = pos_buffer[idxs]
+  π_replay = hcat(π_buffer[idxs]...)
+  res_replay = res_buffer[idxs]
+  return pos_replay, π_replay, res_replay
 end
 
 #TODO: Model save path
 
 function save_model(nn::NeuralNet)
+  # checking for path to save
+  path = joinpath(Pkg.dir("Alphao.jl"), "models")
+  if !isdir(path) mkdir(path) end
+
   bn,value, policy = cpu.((nn.base_net, nn.value, nn.policy))
-  @save "../models/agz_base.bson" bn
-  @save "../models/agz_value.bson" value
-  @save "../models/agz_policy.bson" policy
+  @save path * "/agz_base.bson" bn
+  @save path * "/agz_value.bson" value
+  @save path * "/agz_policy.bson" policy
 
   # saving weights
-  bn_weights = cpu.(Tracker.data.(params(bn)))
+  # checking for path to save weights
+  path = path * "/weights"
+  if !isdir(path) mkdir(path) end
+
+  bn_weights  = cpu.(Tracker.data.(params(bn)))
   val_weights = cpu.(Tracker.data.(params(value)))
   pol_weights = cpu.(Tracker.data.(params(policy)))
 
-  @save "../models/weights/agz_base.bson" bn_weights
-  @save "../models/weights/agz_value.bson" val_weights
-  @save "../models/weights/agz_policy.bson" pol_weights
+  @save path * "/agz_base.bson" bn_weights
+  @save path * "/weights/agz_value.bson" val_weights
+  @save path * "/agz_policy.bson" pol_weights
 end
 
 
