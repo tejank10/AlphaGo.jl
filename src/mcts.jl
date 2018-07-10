@@ -125,10 +125,10 @@ function select_leaf(mcts_node::MCTSNode)
       continue
     end
     cas = child_action_score(current)
-    #max_score = maximum(cas)
-    #possible_moves = find(x -> x == max_score, cas)
-    #best_move = sample(possible_moves)
-    best_move = findmax(cas)[2]
+    max_score = maximum(cas)
+    possible_moves = find(x -> x == max_score, cas)
+    best_move = sample(possible_moves)
+    #best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
   end
   return current

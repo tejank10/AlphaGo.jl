@@ -56,10 +56,10 @@ function pick_move(mcts_player::MCTSPlayer)
   a move weighted by visit count; later on, pick the absolute max. =#
 
   if mcts_player.root.position.n >= mcts_player.τ_threshold
-    #max_val = maximum(mcts_player.root.child_N)
-    #possible_moves = find(x -> x == max_val, mcts_player.root.child_N)
-    #fcoord = sample(possible_moves)
-    fcoord = findmax(mcts_player.root.child_N)[2]
+    max_val = maximum(mcts_player.root.child_N)
+    possible_moves = find(x -> x == max_val, mcts_player.root.child_N)
+    fcoord = sample(possible_moves)
+    #fcoord = findmax(mcts_player.root.child_N)[2]
   else
     cdf = cumsum(mcts_player.root.child_N)
     cdf /= cdf[end - 1]  # Prevents passing via softpick.
