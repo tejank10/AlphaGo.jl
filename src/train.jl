@@ -30,7 +30,7 @@ function save_model(nn::NeuralNet)
   pol_weights = cpu.(Tracker.data.(params(policy)))
 
   @save path * "/agz_base.bson" bn_weights
-  @save path * "/weights/agz_value.bson" val_weights
+  @save path * "/agz_value.bson" val_weights
   @save path * "/agz_policy.bson" pol_weights
 end
 
