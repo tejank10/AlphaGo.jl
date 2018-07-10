@@ -12,7 +12,7 @@ end
 
 function save_model(nn::NeuralNet)
   # checking for path to save
-  path = joinpath(Pkg.dir("AlphaGo.jl"), "models")
+  path = joinpath(Pkg.dir("AlphaGo"), "models")
   if !isdir(path) mkdir(path) end
 
   bn,value, policy = cpu.((nn.base_net, nn.value, nn.policy))
