@@ -10,7 +10,7 @@ env = GoEnv(9)
   TEST_BOARD = load_board("""
                           .X.....OO
                           X........
-                          """ * repeat(EMPTY_ROW, 7), env)
+                          """ * repeat(EMPTY_ROW, env.planes-1), env)
   TEST_POSITION = Position(env,
       board = TEST_BOARD,
       n = 3,
@@ -26,7 +26,7 @@ env = GoEnv(9)
                           .XOXXOO..
                           XO.OXOX..
                           XXO..X...
-                          """ * repeat(EMPTY_ROW, 6), env)
+                          """ * repeat(EMPTY_ROW, env.planes-2), env)
 
   TEST_POSITION2 = Position(env,
       board = TEST_BOARD2,
@@ -52,27 +52,27 @@ env = GoEnv(9)
     @test size(f) == (9, 9, 16)
     @test assertEqualArray(f[:, :, 1], load_board("""
                                               ...X.....
-                                              .........""" * repeat(EMPTY_ROW, 7), env))
+                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     @test assertEqualArray(f[:, :, 2], load_board("""
                                               X.X......
-                                              .X.......""" * repeat(EMPTY_ROW, 7), env))
+                                              .X.......""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     @test assertEqualArray(f[:, :, 3], load_board("""
                                               .X.X.....
-                                              .........""" * repeat(EMPTY_ROW, 7), env))
+                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     @test assertEqualArray(f[:, :, 4], load_board("""
                                               X.X......
-                                              .........""" * repeat(EMPTY_ROW, 7), env))
+                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     @test assertEqualArray(f[:, :, 5], load_board("""
                                               .X.......
-                                              .........""" * repeat(EMPTY_ROW, 7), env))
+                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     @test assertEqualArray(f[:, :, 6], load_board("""
                                               X.X......
-                                              .........""" * repeat(EMPTY_ROW, 7), env))
+                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
 
     for i = 11:16
       @test assertEqualArray(f[:, :, i], zeros(env.N, env.N))

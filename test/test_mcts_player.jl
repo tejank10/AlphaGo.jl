@@ -62,7 +62,7 @@ function initialize_basic_player(env)
   initialize_game!(player)
   first_node = select_leaf(player.root)
   p, v = player.network(player.root.position)
-  incorporate_results!(first_node, p.tracker.data, v.tracker.data, player.root)
+  incorporate_results!(first_node, p.data, v.data, player.root)
   return player
 end
 

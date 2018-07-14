@@ -21,7 +21,7 @@ function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
   # affects the first move of the game.
   first_node = select_leaf(player.root)
   prob, val = nn(first_node.position)
-  incorporate_results!(first_node, prob.tracker.data, val.tracker.data, first_node)
+  incorporate_results!(first_node, prob.data, val.data, first_node)
 
   while true
     inject_noise!(player.root)

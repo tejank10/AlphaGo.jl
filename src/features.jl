@@ -1,9 +1,9 @@
 function stone_features(pos::GoPosition)
-  features = zeros(UInt8, pos.env.N, pos.env.N, 16)
+  features = zeros(UInt8, pos.env.N, pos.env.N, 2*pos.env.planes)
 
   num_deltas_avail = size(pos.board_deltas, 3)
   cumulative_deltas = cumsum(pos.board_deltas, 3)
-  last_eight = repeat(pos.board, outer = [1, 1, 8])
+  last_eight = repeat(pos.board, outer = [1, 1, pos.env.planes])
   # apply deltas to compute previous board states
   last_eight[:, :, 2:num_deltas_avail + 1] .= last_eight[:, :, 2:num_deltas_avail + 1] .- cumulative_deltas
   # if no more deltas are available, just repeat oldest board.

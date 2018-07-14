@@ -430,7 +430,7 @@ function pass_move!(pos::GoPosition; mutate = false)
   N = size(pos.board, 1)
 
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
-  new_pos.board_deltas = cat(3, zeros(Int8, N, N, 1), get_first_n(new_pos.board_deltas, 6))
+  new_pos.board_deltas = cat(3, zeros(Int8, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
   new_pos.to_play *= -1
   new_pos.ko = nothing
   if length(new_pos.recent) > 1 && new_pos.recent[end - 1].move == nothing
@@ -502,7 +502,7 @@ function play_move!(pos::GoPosition, c; color = nothing, mutate = false)
   # keep a rolling history of last 7 deltas - that's all we'll need to
   # extract the last 8 board states.
 
-  new_pos.board_deltas = cat(3, reshape(new_board_delta, N, N, 1), get_first_n(new_pos.board_deltas, 6))
+  new_pos.board_deltas = cat(3, reshape(new_board_delta, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
   new_pos.to_play *= -1
   return new_pos
 end

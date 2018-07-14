@@ -7,12 +7,13 @@ struct GoEnv <: GameEnv
   NEIGHBORS::Dict{NTuple{2, Int}, Array{NTuple{2, Int}, 1}}
   DIAGONALS::Dict{NTuple{2, Int}, Array{NTuple{2, Int}, 1}}
 
-  function GoEnv(board_size::Int = 19)
+  function GoEnv(board_size::Int = 19, planes::Int = 17)
     N = board_size
     action_space = N ^ 2 + 1 # plus 1 for pass move
     ALL_COORDS = [(i, j) for i = 1:N for j = 1:N]
     EMPTY_BOARD = zeros(Int8, N, N)
-    planes = 1 * 2 * 8 + 1
+    @assert planes % 2 == 1
+    planes = (planes - 1) ÷ 2
 
     check_bounds(c) = 1 <= c[1] <= N && 1 <= c[2] <= N
 

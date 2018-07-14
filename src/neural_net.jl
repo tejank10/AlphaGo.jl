@@ -16,7 +16,7 @@ mutable struct NeuralNet
       res_block() = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])
       # 19 residual blocks
       tower = [res_block() for i = 1:tower_height]
-      base_net = Chain(Conv((3,3), env.planes=>256, pad=(1,1)), BatchNorm(256, relu),
+      base_net = Chain(Conv((3,3), 2env.planes+1=>256, pad=(1,1)), BatchNorm(256, relu),
                         tower...) |> gpu
     end
     if value == nothing
@@ -85,7 +85,7 @@ function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float3
       p, v = nn(positions[j:j+31], true)
       loss = loss_π(cu(π[:, j:j+31]), p) + loss_value(cu(z[j:j+31]),v) + loss_reg(nn)
       back!(loss)
-      loss_avg += loss.tracker.data
+      loss_avg += loss.data
       nn.opt()
     end
   end
