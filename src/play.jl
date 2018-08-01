@@ -63,6 +63,8 @@ function play(env::GameEnv, nn = nothing; tower_height = 19, num_readouts = 800,
     end
   end
 
+  println(az.root.position)
+
   winner = result(az.root.position)
   set_result!(az, winner, false)
   mode = mode == 0 ? -1 : 1

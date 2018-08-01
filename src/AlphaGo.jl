@@ -19,11 +19,12 @@ end
 export MCTSPlayer, NeuralNet, pick_move, play_move!,
       initialize_game!, set_result!,
       should_resign, is_done, result, train!, selfplay,
-      train, play, load_model, GoEnv, Position, all_legal_moves,
+      train, play, load_model, GoEnv, GomokuEnv, Position, all_legal_moves,
       ChessEnv, result
 
 
 include("game/go/go.jl")
+include("game/gomoku/gomoku.jl")
 include("game/env.jl")
 include("mcts.jl")
 include("mcts_play.jl")

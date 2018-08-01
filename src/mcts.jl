@@ -118,12 +118,13 @@ function select_leaf(mcts_node::MCTSNode)
     end
     # HACK: if last move was a pass, always investigate double-pass first
     # to avoid situations where we auto-lose by passing too early.
-    if (length(current.position.recent) != 0
+    if typeof(mcts_node.position.env)==GoEnv && (length(current.position.recent) != 0
       && current.position.recent[end].move == nothing
       && current.child_N[pass_move] == 0)
       current = maybe_add_child!(current, pass_move)
       continue
     end
+   
     cas = child_action_score(current)
     max_score = maximum(cas)
     possible_moves = find(x -> x == max_score, cas)
@@ -139,7 +140,7 @@ function maybe_add_child!(mcts_node::MCTSNode, fcoord)
   if fcoord ∉ keys(mcts_node.children)
     new_position = play_move!(mcts_node.position, from_flat(fcoord, mcts_node.position))
     mcts_node.children[fcoord] = MCTSNode(new_position, fcoord, mcts_node)
-  	end
+  end
   return mcts_node.children[fcoord]
 end
 
@@ -184,7 +185,7 @@ end
 
 function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   board_size = mcts_node.position.env.N
-  @assert size(move_probs) == (board_size ^ 2 + 1,)
+  @assert size(move_probs) == (mcts_node.position.env.action_space, )
   # A finished game should not be going through this code path - should
   # directly call backup_value() on the result of the game.
 	@assert !mcts_node.position.done

@@ -39,7 +39,7 @@ function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
     move = pick_move(player)
     play_move!(player, move)
 
-    #println(player.root.position)
+    #println(player.root.position, move)
     if is_done(player.root)
       set_result!(player, result(player.root.position), false)
       break

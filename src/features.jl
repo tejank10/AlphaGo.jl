@@ -1,4 +1,6 @@
-function stone_features(pos::GoPosition)
+GoTypeEnv = Union{GoEnv,GomokuEnv}
+
+function stone_features(pos)
   features = zeros(UInt8, pos.env.N, pos.env.N, 2*pos.env.planes)
 
   num_deltas_avail = size(pos.board_deltas, 3)
@@ -14,8 +16,8 @@ function stone_features(pos::GoPosition)
   return features + 0.
 end
 
-color_to_play_feature(pos::GoPosition) = pos.to_play * ones(UInt8, pos.env.N, pos.env.N, 1)
+color_to_play_feature(pos) = pos.to_play * ones(UInt8, pos.env.N, pos.env.N, 1)
 
 get_feats(player::MCTSPlayer) = get_feats(player.root.position)
 
-get_feats(pos::GoPosition) = cat(3, stone_features(pos), color_to_play_feature(pos))
+get_feats(pos) = cat(3, stone_features(pos), color_to_play_feature(pos))
