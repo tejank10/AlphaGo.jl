@@ -555,7 +555,7 @@ end
 
 function replay_position(pos::GoPosition, result)
   #=
-  Wrapper for a go.GoPosition which replays its history.
+  Wrapper for a GoPosition which replays its history.
   Assumes an empty start position! (i.e. no handicap, and history must be exhaustive.)
 
   Result must be passed in, since a resign cannot be inferred from position
