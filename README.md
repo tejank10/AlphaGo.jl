@@ -11,7 +11,7 @@ Pkg.clone("https://github.com/tejank10/AlphaGo.jl")
 using go
 ```
 Making an environment of Go is simple  
-`env = make_env(9)`  
+`env = GoEnv(9)`  
 Here 9 is the size of board i.e., a 9x9 board is created.   
 ```
    A B C D E F G H J  
