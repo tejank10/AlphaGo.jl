@@ -1,9 +1,13 @@
 # AlphaGo.jl
 AlphaGo.jl is pure Julia implementation of AlphaGo Zero using Flux.jl.
 
+## Installation 
+To install this package simply run
+```
+Pkg.clone("https://github.com/tejank10/AlphaGo.jl")
+```
 ## Usage
 ```
-include("PATH_TO_AlphaGo.jl/src/go.jl")
 using go
 ```
 Making an environment of Go is simple  
