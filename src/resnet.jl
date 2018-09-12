@@ -5,7 +5,7 @@ struct ResidualBlock
     shortcut
 end
 
-Flux.treelike(ResidualBlock)
+@treelike ResidualBlock
 
 # ResidualBlock Function allows us to define a Residual Block having any number of Convolution and Batch Normalization Layers
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)

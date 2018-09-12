@@ -3,8 +3,9 @@
 module AlphaGo
 using CuArrays
 using Flux
-using Flux: crossentropy, back!, mse
+using Flux: crossentropy, back!, mse, @treelike
 using StatsBase: Weights
+using Printf: @sprintf 
 
 struct IllegalMove <:Exception end
 abstract type Position end

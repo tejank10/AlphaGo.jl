@@ -109,7 +109,7 @@ function evaluate(env::GameEnv, black_net::NeuralNet, white_net::NeuralNet; num_
 
     while true
       active = num_move % 2 == true ? white : black
-      inactive = num_move % 2 == true? black : white
+      inactive = num_move % 2 == true ? black : white
 
       current_readouts = N(active.root)
       readouts = active.num_readouts

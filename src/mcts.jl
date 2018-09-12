@@ -30,7 +30,7 @@ mutable struct DummyNode
   This node is intended to be a placeholder for the root node, which would
   otherwise have no parent node. If all nodes have parents, code becomes
   simpler. =#
-  parent::Void
+  parent::Nothing
   child_N::DefaultDict{Any, Float32, Float32}
   child_W::DefaultDict{Any, Float32, Float32}
   function DummyNode()
