@@ -1,13 +1,17 @@
 # AlphaGo.jl
 AlphaGo.jl is pure Julia implementation of AlphaGo Zero using Flux.jl.
 
+## Installation 
+To install this package simply run
+```
+Pkg.clone("https://github.com/tejank10/AlphaGo.jl")
+```
 ## Usage
 ```
-include("PATH_TO_AlphaGo.jl/src/go.jl")
 using go
 ```
 Making an environment of Go is simple  
-`env = make_env(9)`  
+`env = GoEnv(9)`  
 Here 9 is the size of board i.e., a 9x9 board is created.   
 ```
    A B C D E F G H J  
@@ -24,21 +28,23 @@ Here 9 is the size of board i.e., a 9x9 board is created.
 Move: 0. Captures X: 0 O: 0  
 To Play: X(BLACK)  
 ```  
-AlphaGo.jl supports KGS and SGF form of coordinates. By default it is KGS. To make a move, use `step!`  
-`step!(env, "A9", show_board = true)`
-```
-   A B C D E F G H J
- 9 X<. . . . . . . . 9
- 8 . . . . . . . . . 8
- 7 . . . . . . . . . 7
- 6 . . . . . . . . . 6
- 5 . . . . . . . . . 5
- 4 . . . . . . . . . 4
- 3 . . . . . . . . . 3
- 2 . . . . . . . . . 2
- 1 . . . . . . . . . 1
-   A B C D E F G H J
-Move: 1. Captures X: 0 O: 0
-To Play: O(WHITE)
-```  
-`step!` returns a tuple of input state, action, reward, output state and done, where done is a boolean value indicating whether the game is over. The game is over when there are two successive passes.
+Training is done using `train()` method. `train()` method is used by the user to train the model based on the following parameters:
+- `env`
+- `num_games`: Number of self-play games to be played
+Optional arguments:
+- `memory_size`: Size of the memory buffer
+- `batch_size`
+- `epochs`: Number of epochs to train the data on
+- `ckp_freq`: Frequecy of saving the model and weights
+- `tower_height`: AlphaGo Zero Architecture uses residual networks stacked together. This is called a tower of residual networks. `tower_height` specifies how many residual blocks to be stacked.
+- `model`: Object of type `NeuralNet`
+- `readouts`: number of readouts by `MCTSPlayer`
+- `start_training_after`: Number of games after which training will be started
+
+The network can be tested to play against humans by using the `play()` method. `play()` takes following arguments:
+- `env`
+- `nn`: an object of type `NeuralNet`
+- `tower_height`
+- `num_readouts`
+- `mode`: It specifies human will play as Black or white. If `mode` is 0 then human is Black, else White.
+
