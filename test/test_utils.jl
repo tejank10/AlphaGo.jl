@@ -7,7 +7,7 @@ function load_board(str, go_env::GoEnv)
       '*' => 3, # Ko
       '?' => 4  # UNKNOWN
   ])
-  str = replace(str, r"[^XO\.#]+", "")
+  str = replace(str, r"[^XO\.#]+" => s"")
   @assert length(str) == go_env.N ^ 2 # "Board to load didn't have right dimensions"
   board = zeros(Int8, go_env.N, go_env.N)
   for (i, char) in enumerate(str)

@@ -18,7 +18,7 @@ mutable struct MCTSPlayer
                resign_threshold = -0.9) where T <: GameEnv
     τ_threshold = two_player_mode ? -1 : (env.N * env.N ÷ 12) ÷ 2 * 2
     new(env, network, num_readouts, two_player_mode, τ_threshold,
-        Array{Float32, 1}(), Array{Array{Float32, 1}, 1}(), 0, "",
+        Vector{Float32}(), Vector{Vector{Float32}}(), 0, "",
         nothing, resign_threshold, nothing)
   end
 end
@@ -57,7 +57,7 @@ function pick_move(mcts_player::MCTSPlayer)
 
   if mcts_player.root.position.n >= mcts_player.τ_threshold
     max_val = maximum(mcts_player.root.child_N)
-    possible_moves = find(x -> x == max_val, mcts_player.root.child_N)
+    possible_moves = findall(x -> x == max_val, mcts_player.root.child_N)
     fcoord = sample(possible_moves)
     #fcoord = findmax(mcts_player.root.child_N)[2]
   else

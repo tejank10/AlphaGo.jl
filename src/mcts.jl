@@ -83,13 +83,13 @@ end
 
 legal_moves(x::MCTSNode) = all_legal_moves(x.position)
 
-child_action_score(x::MCTSNode) = child_Q(x) * x.position.to_play .+
-                                            child_U(x) - 1000 * (1 - legal_moves(x))
+child_action_score(x::MCTSNode) = child_Q(x) .* x.position.to_play .+
+                                            child_U(x) .- 1000 * (1 .- legal_moves(x))
 
-child_Q(x::MCTSNode) = x.child_W ./ (1 + x.child_N)
+child_Q(x::MCTSNode) = x.child_W ./ (1 .+ x.child_N)
 
-child_U(x::MCTSNode) = (c_puct * √(1 + N(x)) *
-                x.child_prior ./ (1 + x.child_N))
+child_U(x::MCTSNode) = (c_puct * √(1 .+ N(x)) *
+                x.child_prior ./ (1 .+ x.child_N))
 
 Q(x::MCTSNode) = W(x) / (1 + N(x))
 
@@ -127,7 +127,7 @@ function select_leaf(mcts_node::MCTSNode)
    
     cas = child_action_score(current)
     max_score = maximum(cas)
-    possible_moves = find(x -> x == max_score, cas)
+    possible_moves = findall(x -> x == max_score, cas)
     best_move = sample(possible_moves)
     #best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
@@ -188,11 +188,14 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   @assert size(move_probs) == (mcts_node.position.env.action_space, )
   # A finished game should not be going through this code path - should
   # directly call backup_value() on the result of the game.
-	@assert !mcts_node.position.done
+  
+  #TODO: Uncommenting @show passes the test. Why?
+  #@show !mcts_node.position.done
+  @assert !mcts_node.position.done
   if mcts_node.is_expanded
     revert_visits!(mcts_node, up_to)
     return
-	end
+  end
   mcts_node.is_expanded = true
   mcts_node.original_prior .= mcts_node.child_prior .= move_probs
   # initialize child Q as current node's value, to prevent dynamics where

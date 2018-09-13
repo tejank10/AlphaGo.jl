@@ -1,4 +1,4 @@
-using Base.Test
+using Test
 
 @testset "AlphaGo" begin
   include("test_go.jl")

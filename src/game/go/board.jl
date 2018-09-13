@@ -33,7 +33,7 @@ function find_reached(board, c, env::GoEnv)
   while length(frontier) != 0
     current = pop!(frontier)
     push!(chain, current)
-    for n in env.NEIGHBORS[current...]
+    for n in env.NEIGHBORS[current]
       if board[n...] == color && n ∉ chain
         push!(frontier, n)
       elseif board[n...] != color
@@ -136,8 +136,8 @@ function from_board(board, env::GoEnv)
   for color ∈ (WHITE, BLACK)
     while color ∈ board
       curr_group_id += 1
-      found_color = find(x -> x == color, board)
-      coord = coordify(found_color[1], N = env.N)
+      coord_flat = findfirst(x -> x == color, board[:])
+      coord = coordify(coord_flat, N = env.N)
       chain, reached = find_reached(board, coord, env)
       liberties = Set(r for r in reached if board[r...] == EMPTY)
       new_group = Group(curr_group_id, chain, liberties, color)
@@ -396,7 +396,7 @@ function all_legal_moves(pos::GoPosition)
   N = size(pos.board, 1)
   legal_moves = ones(Int8, N, N)
   # ...unless there is already a stone there
-  legal_moves[pos.board .!= EMPTY] = 0
+  legal_moves[pos.board .!= EMPTY] .= 0
   # calculate which spots have 4 stones next to them
   # padding is because the edge always counts as a lost liberty.
   adjacent = ones(Int8, N + 2, N + 2)
@@ -407,7 +407,7 @@ function all_legal_moves(pos::GoPosition)
   surrounded_spots = (pos.board .== EMPTY) .* (num_adjacent_stones .== 4)
   # Such spots are possibly illegal, unless they are capturing something.
   # Iterate over and manually check each spot.
-  for c in find(x -> x != 0, surrounded_spots)
+  for c in findall(x -> x != 0, surrounded_spots[:])
     coord = coordify(c; N = N)
     if is_move_suicidal(pos, coord)
       legal_moves[coord...] = 0
@@ -420,7 +420,7 @@ function all_legal_moves(pos::GoPosition)
   end
 
   # and pass is always legal
-  return cat(1, legal_moves[:], [1])
+  return vcat(legal_moves[:], [1])
 end
 
 function pass_move!(pos::GoPosition; mutate = false)
@@ -430,7 +430,7 @@ function pass_move!(pos::GoPosition; mutate = false)
   N = size(pos.board, 1)
 
   push!(new_pos.recent, PlayerMove(new_pos.to_play, nothing))
-  new_pos.board_deltas = cat(3, zeros(Int8, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
+  new_pos.board_deltas = cat(dims=3, zeros(Int8, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
   new_pos.to_play *= -1
   new_pos.ko = nothing
   if length(new_pos.recent) > 1 && new_pos.recent[end - 1].move == nothing
@@ -502,7 +502,8 @@ function play_move!(pos::GoPosition, c; color = nothing, mutate = false)
   # keep a rolling history of last 7 deltas - that's all we'll need to
   # extract the last 8 board states.
 
-  new_pos.board_deltas = cat(3, reshape(new_board_delta, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
+  new_pos.board_deltas = cat(dims = 3, reshape(new_board_delta, N, N, 1), 
+			get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
   new_pos.to_play *= -1
   return new_pos
 end
@@ -512,8 +513,8 @@ function score(pos::GoPosition)
   working_board = deepcopy(pos.board)
   N = size(pos.board, 1)
   while EMPTY ∈ working_board
-    unassigned_spaces = find(x -> x == EMPTY, working_board)
-    c = coordify(unassigned_spaces[1], N =  N)
+    unassigned_spaces = findfirst(x -> x == EMPTY, working_board[:])
+    c = coordify(unassigned_spaces, N =  N)
     territory, borders = find_reached(working_board, c, pos.env)
     border_colors = Set(working_board[b...] for b in borders)
     X_border = BLACK ∈ border_colors
@@ -527,8 +528,8 @@ function score(pos::GoPosition)
     end
     place_stones!(working_board, territory_color, territory)
   end
-  return countnz(find(x -> x == BLACK, working_board)) -
-  countnz(find(x -> x == WHITE, working_board)) - pos.komi
+  return count(x -> x == BLACK, working_board) -
+  count(x -> x == WHITE, working_board) - pos.komi
 end
 
 function result(pos::GoPosition)

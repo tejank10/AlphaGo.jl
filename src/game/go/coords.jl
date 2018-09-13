@@ -16,7 +16,7 @@ function from_sgf(sgfc)
   if sgfc == nothing || sgfc == ""
     return nothing
   end
-  return searchindex(_SGF_COLUMNS, sgfc[2]), searchindex(_SGF_COLUMNS, sgfc[1])
+  return findfirst(isequal(sgfc[2]), _SGF_COLUMNS), findfirst(isequal(sgfc[1]), _SGF_COLUMNS)
 end
 
 # Converts from a board coordinate to an SGF coordinate
@@ -28,7 +28,7 @@ function from_kgs(kgsc, env)
     return nothing
   end
   kgsc = uppercase(kgsc)
-  col = searchindex(_KGS_COLUMNS, kgsc[1])
+  col = findfirst(isequal(kgsc[1]), _KGS_COLUMNS)
   row_from_bottom = parse(Int, kgsc[2:end])
   return env.N - row_from_bottom + 1, col
 end

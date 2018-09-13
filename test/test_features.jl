@@ -1,7 +1,6 @@
 using AlphaGo
 using AlphaGo: stone_features
 using AlphaGo: GoPosition, PlayerMove, BLACK, WHITE, play_move!
-using Base.Test
 
 include("test_utils.jl")
 env = GoEnv(9)

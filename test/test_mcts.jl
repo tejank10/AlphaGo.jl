@@ -1,9 +1,9 @@
-using  AlphaGo
+using AlphaGo
 using AlphaGo: PlayerMove, GoPosition, BLACK, WHITE, to_flat, from_kgs
 using AlphaGo: MCTSNode, select_leaf, incorporate_results!, maybe_add_child!,
                inject_noise!, child_action_score, N, Q, child_Q, set_N!,
                add_virtual_loss!
-using Base.Test
+using Random: seed!
 
 include("test_utils.jl")
 
@@ -43,7 +43,7 @@ include("test_utils.jl")
       to_play = WHITE);
 
   @testset "action_flipping" begin
-    srand(1)
+    seed!(1)
     probs = 0.02 * ones(env.N ^ 2 + 1)
     probs = probs + rand(env.N ^ 2 + 1) * 0.001
     black_root = MCTSNode(Position(env))
@@ -152,7 +152,7 @@ include("test_utils.jl")
     # and let's say the root were visited a lot of times, which pumps up the
     # action score for unvisited moves...
     set_N!(root, 10000)
-    root.child_N[Bool.(all_legal_moves(root.position))] = 10000
+    root.child_N[Bool.(all_legal_moves(root.position))] .= 10000
     # this should not throw an error...
     leaf = select_leaf(root)
     # the returned leaf should not be the illegal move

@@ -4,7 +4,6 @@ using AlphaGo: select_leaf, incorporate_results!, child_U, inject_noise!,
                 Q, N, child_Q, initialize_game!, tree_search!, MCTSRules, extract_data
 using AlphaGo: pass_move!, play_move!, PlayerMove, BLACK, WHITE, PlayerMove,
                 to_kgs, score, from_kgs
-using Base.Test
 
 include("test_utils.jl")
 
@@ -28,8 +27,8 @@ function (dn::DummyNet)(positions = nothing)
     throw(ArgumentError("No positions passed!"))
   end
   len = length(positions)
-  return param(repeat(dn.fake_priors, outer = [1, len])),
-          param(repmat([dn.fake_value], len))
+  param(repeat(dn.fake_priors, outer = [1, len])),
+          param(repeat([dn.fake_value], len))
 end
 
 env = GoEnv(9)
@@ -68,7 +67,7 @@ end
 
 function initialize_almost_done_player(env)
   probs = ones(env.action_space) * 0.001
-  probs[3:5] = 0.2  # some legal moves along the top.
+  probs[3:5] .= 0.2  # some legal moves along the top.
   probs[end] = 0.2  # passing is also ok
   net = DummyNet(env; fake_priors = probs)
   player = MCTSPlayer(env, net)
@@ -129,11 +128,11 @@ end
 
     #TODO: complete this test
     #with mock.patch('random.random', lambda: .5)
-    move = pick_move(player)
+    #move = pick_move(player)
     #@test move == (3, 1)
 
     #with mock.patch('random.random', lambda: .99):
-    move = pick_move(player)
+    #move = pick_move(player)
     #@test move == (4, 1)
   end
 
@@ -181,7 +180,7 @@ end
 
     # Search should converge on D9 as only winning move.
     flattened = to_flat(from_kgs("D9", env), player.root.position)
-    best_moves = find(x -> x .== maximum(player.root.child_N), player.root.child_N)
+    best_moves = findall(x -> x .== maximum(player.root.child_N), player.root.child_N)
     @test flattened ∈ best_moves
     # D9 should have a positive value
     @test Q(player.root.children[flattened]) > 0

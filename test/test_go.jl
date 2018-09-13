@@ -3,12 +3,11 @@ using AlphaGo: from_kgs, from_sgf, BLACK, WHITE, EMPTY, MISSING_GROUP_ID,
               GoPosition, is_koish, is_eyeish, PlayerMove, is_move_legal,
               is_move_suicidal, score, from_board, flip_playerturn!, add_stone!,
               all_legal_moves, IllegalMove, from_flat, pass_move!, play_move!
-using Base.Test
 
 include("test_utils.jl")
 
 pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
-                                        repmat([env], length(split(string)))))
+                                        repeat([env], length(split(string)))))
 
 @testset "go" begin
   env = GoEnv(9)
@@ -185,7 +184,7 @@ pc_set(string, env::GoEnv) = Set(map(from_kgs, split(string),
       @test liberty_cache[stone...] == 4 ? true : throw(AssertionError(string(stone)))
     end
     for stone in left_group.stones
-      @test liberty_cache[stone...] == 3 ? true: throw(AssertionError(string(stone)))
+      @test liberty_cache[stone...] == 3 ? true : throw(AssertionError(string(stone)))
     end
     for stone in right_group.stones
       @test liberty_cache[stone...] == 4 ? true : throw(AssertionError(string(stone)))
