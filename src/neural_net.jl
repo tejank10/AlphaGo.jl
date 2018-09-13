@@ -52,9 +52,9 @@ function testmode!(nn::NeuralNet, val::Bool=true)
 end
 
 function (nn::NeuralNet)(input::Vector{T}, train = false) where T <: Position
-  nn_in = cat(4, get_feats.(input)...) |> gpu
+  nn_in = cat(dims=4, get_feats.(input)...) |> gpu
   if !train testmode!(nn) end
-  common_out = nn.base_net(nn_in |> gpu)
+  common_out = nn.base_net(nn_in)
   π, val = nn.policy(common_out), nn.value(common_out)
   if !train testmode!(nn, false) end
   return π, val
@@ -83,7 +83,7 @@ function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float3
   for i = 1:epochs
     for j = 1:32:data_size
       p, v = nn(positions[j:j+31], true)
-      loss = loss_π(cu(π[:, j:j+31]), p) + loss_value(cu(z[j:j+31]),v) + loss_reg(nn)
+      loss = loss_π(π[:, j:j+31] |> gpu, p) + loss_value(z[j:j+31] |> gpu,v) + loss_reg(nn)
       back!(loss)
       loss_avg += loss.data
       nn.opt()
