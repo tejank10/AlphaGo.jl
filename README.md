@@ -4,11 +4,11 @@ AlphaGo.jl is pure Julia implementation of AlphaGo Zero using Flux.jl.
 ## Installation 
 To install this package simply run
 ```
-Pkg.clone("https://github.com/tejank10/AlphaGo.jl")
+pkg> add https://github.com/tejank10/AlphaGo.jl
 ```
 ## Usage
 ```
-using go
+using AlphaGo
 ```
 Making an environment of Go is simple  
 `env = GoEnv(9)`  
