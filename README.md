@@ -48,3 +48,6 @@ The network can be tested to play against humans by using the `play()` method. `
 - `num_readouts`
 - `mode`: It specifies human will play as Black or white. If `mode` is 0 then human is Black, else White.
 
+# TODO
+- Structure for memory buffer
+- GUI
