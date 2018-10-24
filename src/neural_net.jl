@@ -1,5 +1,5 @@
 import Flux.testmode!
-import Base.deepcopy
+import Base: show, deepcopy
 
 include("resnet.jl")
 
@@ -34,6 +34,11 @@ mutable struct NeuralNet
   end
 end
 
+function Base.show(io::IO, nn::NeuralNet)
+  println("Base: ", nn.base_net)
+  println("Policy: ", nn.policy)
+  println("Value: ", nn.value)
+end
 
 #=
 function deepcopy(nn::NeuralNet)

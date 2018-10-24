@@ -84,7 +84,7 @@ end
 legal_moves(x::MCTSNode) = all_legal_moves(x.position)
 
 child_action_score(x::MCTSNode) = child_Q(x) .* x.position.to_play .+
-                                            child_U(x) .- 1000 * (1 .- legal_moves(x))
+                                            child_U(x) #.- 1000 * (1 .- legal_moves(x))
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 .+ x.child_N)
 
@@ -126,9 +126,11 @@ function select_leaf(mcts_node::MCTSNode)
     end
    
     cas = child_action_score(current)
-    max_score = maximum(cas)
-    possible_moves = findall(x -> x == max_score, cas)
-    best_move = sample(possible_moves)
+    legal_mv = legal_moves(current) 
+    max_score = maximum(cas[legal_mv])
+    possible_moves = findall(x->x[2]==max_score && x[1], collect(zip(legal_mv, cas)))
+    
+    best_move = rand(possible_moves)
     #best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
   end

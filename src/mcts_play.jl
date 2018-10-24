@@ -125,7 +125,7 @@ should_resign(mcts_player::MCTSPlayer) = Q_perspective(mcts_player.root) < mcts_
 
 function extract_data(mcts_player::MCTSPlayer)
   @assert length(mcts_player.searches_π) == mcts_player.root.position.n
-  @assert mcts_player.result != 0
+  #@assert mcts_player.result != 0
   positions = Vector{Position}()
   πs = deepcopy.(mcts_player.searches_π)
   results = Vector{Int}()

@@ -122,7 +122,9 @@ function has_game_ended(board::Array{Int8, 2}, env)
       end
     end
   end
-
+  
+  sum(board .== EMPTY) == 0 && return true, EMPTY
+    
   false, EMPTY
 end
 
@@ -158,7 +160,8 @@ function play_move!(pos::GomokuPosition, c; color = nothing, mutate = false)
   # keep a rolling history of last 7 deltas - that's all we'll need to
   # extract the last 8 board states.
 
-  new_pos.board_deltas = cat(3, reshape(new_board_delta, N, N, 1), get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
+  new_pos.board_deltas = cat(dims=3, reshape(new_board_delta, N, N, 1), 
+			     get_first_n(new_pos.board_deltas, new_pos.env.planes-2))
   new_pos.to_play *= -1
   new_pos.done, new_pos.winner = has_game_ended(new_pos)
   return new_pos

@@ -18,5 +18,10 @@ struct GomokuEnv <: GameEnv
   end
 end
 
+function Base.show(io::IO, env::GomokuEnv)
+  println("Gomoku board size: $(env.N)")
+  println("Connect $(env.n_in_row) to win")
+end
+
 include("board.jl")
 include("coords.jl")
