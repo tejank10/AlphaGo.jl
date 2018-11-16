@@ -1,6 +1,6 @@
 import Flux.testmode!
 import Base: show, deepcopy
-using Flux.Tracker: @treelike
+using Flux: @treelike
 include("resnet.jl")
 
 
@@ -79,27 +79,29 @@ loss_value(z, v) = 0.01f0 * mse(z, v)
 
 function loss_reg(nn::NeuralNet)
   sum_sqr(x) = sum([sum(i.^2) for i in x])
-  0.0001f0 * (sum_sqr(params(nn.base_net)) + sum_sqr(params(nn.value)) + sum_sqr(params(nn.policy)))
+  0.0001f0 * sum_sqr(params(nn))
 end
 
-function train!(nn::NeuralNet, input_data::Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}}; epochs = 1)
-  positions = input_data[1]
-  π, z = input_data[2:3]
-  loss_avg = 0.0f0
-  data_size = length(z)
-  for i = 1:epochs
-    for j = 1:32:data_size
-      p, v = nn(positions[j:j+31], true)
-      loss = loss_π(π[:, j:j+31] |> gpu, p) + loss_value(z[j:j+31] |> gpu,v) + loss_reg(nn)
-      back!(loss)
-      loss_avg += loss.data
-      nn.opt()
-    end
+function _train(nn::NeuralNet, input_data::T, opt; epochs = 1) where T<:NamedTuple{(:positions, :policy, :values), Tuple{Vector{Position}, Matrix{Float32}, Vector{Int}}}
+  positions = input_data.positions
+  π = input_data.policy |> gpu
+  z = input_data.values |> gpu
+  
+  data_size = length(positions)
+
+  for i = 1:epochs, j = 1:32:data_size
+    p, v = nn(positions[j:j+31], true)
+    loss = loss_π(π[:, j:j+31], p) + loss_value(z[j:j+31], v) + loss_reg(nn)
+    back!(loss)
+    loss_avg += loss.data
+    update!(opt, params(nn))
   end
+
   return loss_avg / epochs
 end
 
-function evaluate(env::GameEnv, black_net::NeuralNet, white_net::NeuralNet; num_games = 400, ro = 800)
+function evaluate(env::GameEnv, black_net::NeuralNet, white_net::NeuralNet; 
+		  num_games = 400, ro = 800, verbose::Bool=false)
   games_won = 0
 
   testmode!(black_net)
@@ -149,6 +151,8 @@ function evaluate(env::GameEnv, black_net::NeuralNet, white_net::NeuralNet; num_
 
   testmode!(black_net, false)
   testmode!(white_net, false)
-  print("Won $games_won / $num_games. Win rate $(games_won/num_games). ")
+  
+  verbose && print("Won $games_won / $num_games. Win rate: $(games_won/num_games). ")
+  
   return games_won / num_games ≥ 0.55
 end

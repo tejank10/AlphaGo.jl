@@ -126,7 +126,7 @@ function select_leaf(mcts_node::MCTSNode)
     end
    
     cas = child_action_score(current)
-    legal_mv = legal_moves(current) 
+    legal_mv = Bool.(legal_moves(current))
     max_score = maximum(cas[legal_mv])
     possible_moves = findall(x->x[2]==max_score && x[1], collect(zip(legal_mv, cas)))
     
