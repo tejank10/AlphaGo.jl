@@ -25,5 +25,10 @@ struct GoEnv <: GameEnv
   end
 end
 
+function Base.show(io::IO, env::GoEnv)
+  N, planes = env.N, env.planes
+  print("GoEnv(board size=$N, planes=$planes")
+end
+
 include("board.jl")
 include("coords.jl")

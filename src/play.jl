@@ -9,9 +9,9 @@ function load_model(str, env::GameEnv)
   @load str*"/weights/agz_value.bson" val_weights
   @load str*"/weights/agz_policy.bson" pol_weights
 
-  Flux.loadparams!(bn, bn_weights)
-  Flux.loadparams!(value, val_weights)
-  Flux.loadparams!(policy, pol_weights)
+  Flux.loadparams!(nn.base_net, bn_weights)
+  Flux.loadparams!(nn.value, val_weights)
+  Flux.loadparams!(nn.policy, pol_weights)
                 
   bn  = mapleaves(cu, bn)
   val = mapleaves(cu, value)

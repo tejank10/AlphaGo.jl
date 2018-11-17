@@ -6,11 +6,7 @@ function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
   where n is the number of moves in the game =#
 
   # Disable resign in 5% of games
-  if rand() < 0.05
-    resign_threshold = -1.0
-  else
-    resign_threshold = -0.9
-  end
+  resign_threshold = rand() < 0.05 : -1.0 : -0.9
 
   player = MCTSPlayer(env, nn, num_readouts = num_ro, resign_threshold = resign_threshold)
 

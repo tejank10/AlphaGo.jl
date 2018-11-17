@@ -1,7 +1,5 @@
-# Run set_board_size(N::Int) once you include go.jl
-
 module AlphaGo
-#using CuArrays
+using CuArrays
 using Flux
 using Flux: crossentropy, back!, mse, @treelike
 using StatsBase: Weights
