@@ -9,7 +9,7 @@ struct NeuralNet
   policy::Chain
 end
 
-function NeuralNet(env::AbstractEnv; blocks::UInt = BLOCKS)
+function NeuralNet(env::AbstractEnv; blocks = BLOCKS)
   N, num_planes = env.board_data.N, env.board_data.planes
 
   res_block() = ResidualBlock([256,256,256], [3,3], [1,1], [1,1])

@@ -16,7 +16,7 @@ get_feats(player) = get_feats(player.root.position)
 export MCTSPlayer, pick_move, play_move!,
       initialize_game!, set_result!,
       Go, num_moves, action_space, max_action_space,
-      result_string, is_done, get_feats
+      result_string, is_done, get_feats, train
 
 include("const.jl")
 include("mcts.jl")
