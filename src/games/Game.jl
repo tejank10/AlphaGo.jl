@@ -20,7 +20,7 @@ struct PositionWithContext
 end
 
 struct BoardEnv
-  N::UInt8                         # size of the board
+  N::Int                         # size of the board
   action_space::UnitRange{Int}
   max_action_space::UnitRange{Int} # action space of max size of board
   planes::UInt                     # no. of past states to train neural network
