@@ -36,11 +36,11 @@ function save_model(nn::NeuralNet, epochs::Integer)
 end
 
 function train(env::AbstractEnv; num_games::T = 25000, memory_size::T = BUFFER_SIZE,
-            	 batch_size::T = 32, epochs::T = 1, ckp_freq::T = 1000, readouts::T = 800,
-            	 tower_height::T = 19, model = nothing, start_training_after::T = 50000,
+            	 batch_size::T = BATCH_SIZE, epochs::T = 1, ckp_freq::T = 1000, readouts::T = 800,
+            	 blocks::T = BLOCKS, model = nothing, start_training_after::T = 50000,
           		 duel::Bool = false) where T <: Integer
 
-  model === nothing && (cur_nn = NeuralNet(env; tower_height = tower_height))
+  model === nothing && (cur_nn = NeuralNet(env; blocks = blocks))
 
   duel && (prev_nn = deepcopy(cur_nn))
 
@@ -80,7 +80,7 @@ function train(env::AbstractEnv; num_games::T = 25000, memory_size::T = BUFFER_S
       end
   	end
 
-    if i % ckp_freq == 1
+    if i % ckp_freq == 0
       save_model(cur_nn, i * epochs)
       println("Model saved. ")
     end
