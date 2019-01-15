@@ -61,7 +61,7 @@ function train(env::AbstractEnv; num_games::T = 25000, memory_size::T = BUFFER_S
     if length(pos_buffer) ≥ start_training_after
       replay_pos, replay_π, replay_res = get_replay_batch(pos_buffer, π_buffer, res_buffer;
 							                                            batch_size = batch_size)
-      loss = train_epoch(cur_nn, (replay_pos, replay_π, replay_res), opt; epochs = epochs)
+      loss = train_epoch(cur_nn, replay_pos, replay_π, replay_res, opt; epochs = epochs)
       result = player.result_string
       num_moves = player.root.position.n
       print("Episode $(@sprintf("%5d", i)) over | ")
