@@ -85,7 +85,7 @@ function train(env::AbstractEnv; num_games::T = 25000, memory_size::T = BUFFER_S
       println("Model saved. ")
     end
 
-    println()
+    #println()
   end
 
   return cur_nn
