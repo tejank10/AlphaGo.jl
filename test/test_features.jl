@@ -1,16 +1,20 @@
 using AlphaGo
 using AlphaGo: stone_features
-using AlphaGo: GoPosition, PlayerMove, BLACK, WHITE, play_move!
+using AlphaGo.Game: GoPosition, PlayerMove, play_move!
 
 include("test_utils.jl")
-env = GoEnv(9)
+
+env = Go(9)
 @testset "features" begin
-  EMPTY_ROW = repeat(".", env.N) * '\n'
+  BLACK, WHITE = 1, -1
+  N = env.board_data.N
+  planes = (env.board_data.planes - 1) ÷ 2
+  EMPTY_ROW = repeat(".", N) * '\n'
   TEST_BOARD = load_board("""
                           .X.....OO
                           X........
-                          """ * repeat(EMPTY_ROW, env.planes-1), env)
-  TEST_POSITION = Position(env,
+                          """ * repeat(EMPTY_ROW, planes-1), N)
+  TEST_POSITION = GoPosition(N, planes,
       board = TEST_BOARD,
       n = 3,
       komi = 6.5,
@@ -25,9 +29,9 @@ env = GoEnv(9)
                           .XOXXOO..
                           XO.OXOX..
                           XXO..X...
-                          """ * repeat(EMPTY_ROW, env.planes-2), env)
+                          """ * repeat(EMPTY_ROW, planes-2), N)
 
-  TEST_POSITION2 = Position(env,
+  TEST_POSITION2 = GoPosition(N, planes,
       board = TEST_BOARD2,
       n = 0,
       komi = 6.5,
@@ -36,7 +40,7 @@ env = GoEnv(9)
       recent = Vector{PlayerMove}(),
       to_play = BLACK);
 
-  TEST_POSITION3 = Position(env);
+  TEST_POSITION3 = GoPosition(N, planes);
   for coord in ((1, 1), (1, 2), (1, 3), (1, 4), (2, 2))
     play_move!(TEST_POSITION3, coord, mutate = true)
   end
@@ -51,30 +55,30 @@ env = GoEnv(9)
     @test size(f) == (9, 9, 16)
     @test assertEqualArray(f[:, :, 1], load_board("""
                                               ...X.....
-                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .........""" * repeat(EMPTY_ROW, planes-1), N))
 
     @test assertEqualArray(f[:, :, 2], load_board("""
                                               X.X......
-                                              .X.......""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .X.......""" * repeat(EMPTY_ROW, planes-1), N))
 
     @test assertEqualArray(f[:, :, 3], load_board("""
                                               .X.X.....
-                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .........""" * repeat(EMPTY_ROW, planes-1), N))
 
     @test assertEqualArray(f[:, :, 4], load_board("""
                                               X.X......
-                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .........""" * repeat(EMPTY_ROW, planes-1), N))
 
     @test assertEqualArray(f[:, :, 5], load_board("""
                                               .X.......
-                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .........""" * repeat(EMPTY_ROW, planes-1), N))
 
     @test assertEqualArray(f[:, :, 6], load_board("""
                                               X.X......
-                                              .........""" * repeat(EMPTY_ROW, env.planes-1), env))
+                                              .........""" * repeat(EMPTY_ROW, planes-1), N))
 
     for i = 11:16
-      @test assertEqualArray(f[:, :, i], zeros(env.N, env.N))
+      @test assertEqualArray(f[:, :, i], zeros(N, N))
     end
   end
 end

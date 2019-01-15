@@ -1,4 +1,4 @@
-function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
+function selfplay(env::AbstractEnv, nn::NeuralNet, num_ro::Int = 800)
   #= Plays out a self-play match, returning
   - the final position
   - the n x N² tensor of floats representing the mcts search probabilities
@@ -6,12 +6,13 @@ function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
   where n is the number of moves in the game =#
 
   # Disable resign in 5% of games
-  resign_threshold = rand() < 0.05 : -1.0 : -0.9
+  resign_threshold = rand() < 0.05 ? -1.0 : -0.9
 
-  player = MCTSPlayer(env, nn, num_readouts = num_ro, resign_threshold = resign_threshold)
+  player = MCTSPlayer(env, nn, num_readouts = num_ro,
+                      resign_threshold = resign_threshold)
 
   readouts = player.num_readouts
-  initialize_game!(player)
+  initialize_game!(player, env)
 
   # Must run this once at the start, so that noise injection actually
   # affects the first move of the game.
@@ -29,17 +30,18 @@ function selfplay(env::GameEnv, nn::NeuralNet, num_ro::Int = 800)
     end
 
     if should_resign(player)
-      set_result!(player, -player.root.position.to_play, true)
+      set_result!(player, -get_position(player).to_play, true)
       break
     end
+
     move = pick_move(player)
     play_move!(player, move)
 
-    #println(player.root.position, move)
     if is_done(player.root)
-      set_result!(player, result(player.root.position), false)
+      set_result!(player, result(get_position(player)), false)
       break
     end
   end
+
   return player
 end

@@ -3,40 +3,45 @@ This is Julia implementation of MCTS by Tejan Karmali.
 Reference: Python version of the implementation of MCTS by
 (https://github.com/tensorflow/minigo)
 =#
-
 using DataStructures: DefaultDict
 using Distributions: Dirichlet
+import .Game: play_move!, legal_moves
 
-# Exploration constant balancing priors vs. value net output
-c_puct = 0.96
-# How much to weight the priors vs. dirichlet noise when mixing
-dirichlet_noise_weight = 0.25
+const dirichlet_noise_weight = 0.25f0
 
 struct MCTSRules
   max_game_length::Int
   # Concentrated-ness of the noise being injected into priors
-  dirichlet_noise_alpha::Float32
-
-  function MCTSRules(env)
-    max_game_length = (env.N ^ 2 * 7) ÷ 5
-    dirichlet_noise_alpha = 0.03 * env.max_action_space / env.action_space
-    new(max_game_length, dirichlet_noise_alpha)
-  end
+  α::Float32
 end
 
-mutable struct DummyNode
+function MCTSRules(N, action_space_size, max_action_space_size)
+  max_game_length = (N ^ 2 * 7) ÷ 5
+  α = DIRICHLET_NOISE_α * max_action_space_size / action_space_size
+  MCTSRules(max_game_length, α)
+end
+
+function MCTSRules(env::AbstractEnv)
+  N = env.board_data.N
+  action_space_size = length(env.board_data.action_space)
+  max_action_space_size = length(env.board_data.max_action_space)
+
+  MCTSRules(N, action_space_size, max_action_space_size)
+end
+
+struct DummyNode
   #= A fake node of a MCTS search tree.
 
   This node is intended to be a placeholder for the root node, which would
   otherwise have no parent node. If all nodes have parents, code becomes
   simpler. =#
+
   parent::Nothing
   child_N::DefaultDict{Any, Float32, Float32}
   child_W::DefaultDict{Any, Float32, Float32}
-  function DummyNode()
-    new(nothing, DefaultDict{Any, Float32}(0.0f0), DefaultDict{Any, Float32}(0.0f0))
-  end
 end
+
+DummyNode() = DummyNode(nothing, DefaultDict{Any, Float32}(0.0f0), DefaultDict{Any, Float32}(0.0f0))
 
 mutable struct MCTSNode
   #= A node of a MCTS search tree.
@@ -45,7 +50,7 @@ mutable struct MCTSNode
   so that a decision can be made about which move to explore next. Upon
   selecting a move, the children dictionary is updated with a new node.
 
-  position: A go.Position instance
+  position: A Position instance
   fmove: A move (coordinate) that led to this position, a flattened coord
           (raw number ∈ [1-N^2], with nothing a pass)
   parent: A parent MCTSNode.
@@ -53,42 +58,48 @@ mutable struct MCTSNode
 
   parent
   fmove
-  position :: Position
+  position::Position
   is_expanded::Bool
   losses_applied::Int
-  child_N::Array{Float32, 1}
-  child_W::Array{Float32, 1}
-  original_prior::Array{Float32, 1}
-  child_prior::Array{Float32, 1}
+  child_N::Vector{Float32}
+  child_W::Vector{Float32}
+  original_prior::Vector{Float32}
+  child_prior::Vector{Float32}
   children::Dict
   mcts_rules::MCTSRules
-
-  function MCTSNode(position :: T, fmove = nothing, parent = nothing) where T <: Position
-    if parent == nothing
-      parent = DummyNode()
-    end
-    is_expanded = false
-    losses_applied = 0  # number of virtual losses on this node
-    child_N = zeros(Float32, position.env.action_space)
-    child_W = zeros(Float32, position.env.action_space)
-    # save a copy of the original prior before it gets mutated by d-noise.
-    original_prior = zeros(Float32, position.env.action_space)
-    child_prior = zeros(Float32, position.env.action_space)
-    children = Dict()  # map of flattened moves to resulting MCTSNode
-    mcts_rules = MCTSRules(position.env)
-    new(parent, fmove, position, is_expanded, losses_applied,
-    child_N, child_W, original_prior, child_prior, children, mcts_rules)
-  end
 end
 
-legal_moves(x::MCTSNode) = all_legal_moves(x.position)
+function MCTSNode(position::T, fmove = nothing, parent = nothing) where T <: Position
+  parent === nothing && (parent = DummyNode())
+
+  action_space_size = length(action_space(position))
+	max_action_space_size = length(max_action_space(position))
+
+  is_expanded = false
+  losses_applied = 0  # number of virtual losses on this node
+  child_N = zeros(Float32, action_space_size)
+  child_W = zeros(Float32, action_space_size)
+
+  # save a copy of the original prior before it gets mutated by d-noise.
+  original_prior = zeros(Float32, action_space_size)
+  child_prior = zeros(Float32, action_space_size)
+  children = Dict()  # map of flattened moves to resulting MCTSNode
+
+  board_sz = board_size(position)
+  mcts_rules = MCTSRules(board_sz, action_space_size, max_action_space_size)
+
+  MCTSNode(parent, fmove, position, is_expanded, losses_applied,
+          child_N, child_W, original_prior, child_prior, children, mcts_rules)
+end
+
+legal_moves(x::MCTSNode) = legal_moves(x.position)
 
 child_action_score(x::MCTSNode) = child_Q(x) .* x.position.to_play .+
                                             child_U(x) #.- 1000 * (1 .- legal_moves(x))
 
 child_Q(x::MCTSNode) = x.child_W ./ (1 .+ x.child_N)
 
-child_U(x::MCTSNode) = (c_puct * √(1 .+ N(x)) *
+child_U(x::MCTSNode) = (C_PUCT * √(1 .+ N(x)) *
                 x.child_prior ./ (1 .+ x.child_N))
 
 Q(x::MCTSNode) = W(x) / (1 + N(x))
@@ -104,36 +115,47 @@ W(x::MCTSNode) = get_W(x)
 # Return value of position, from perspective of player to play
 Q_perspective(x::MCTSNode) = Q(x) * x.position.to_play
 
+get_position(x::MCTSNode) = x.position
+#=
+canHack(pos::GoPosition) = !isempty(pos.recent) && pos.recent[end].move === nothing
+canHack(pos) = false
 
+function hack!(current::MCTSNode)
+  board_sz = board_size(current.position)
+  pass_move = board_sz ^ 2 + 1
+
+  # HACK: if last move was a pass, always investigate double-pass first
+  # to avoid situations where we auto-lose by passing too early.
+  if(canHack(current.position) && current.child_N[pass_move] == 0)
+    current = maybe_add_child!(current, pass_move)
+	  return true
+  end
+
+  return false
+end
+=#
 function select_leaf(mcts_node::MCTSNode)
   current = mcts_node
-  board_size = mcts_node.position.env.N
-  pass_move = board_size * board_size + 1
+
   while true
     current_new_N = N(current) + 1
     set_N!(current, current_new_N)
-    # if a node has never been evaluated, we have no basis to select a child.
-    if !current.is_expanded
-      break
-    end
-    # HACK: if last move was a pass, always investigate double-pass first
-    # to avoid situations where we auto-lose by passing too early.
-    if typeof(mcts_node.position.env)==GoEnv && (length(current.position.recent) != 0
-      && current.position.recent[end].move == nothing
-      && current.child_N[pass_move] == 0)
-      current = maybe_add_child!(current, pass_move)
-      continue
-    end
-   
+
+	  # if a node has never been evaluated, we have no basis to select a child.
+    current.is_expanded || break
+
+    #hack!(current) && continue
+
     cas = child_action_score(current)
     legal_mv = Bool.(legal_moves(current))
     max_score = maximum(cas[legal_mv])
     possible_moves = findall(x->x[2]==max_score && x[1], collect(zip(legal_mv, cas)))
-    
+
     best_move = rand(possible_moves)
     #best_move = findmax(cas)[2]
     current = maybe_add_child!(current, best_move)
   end
+
   return current
 end
 
@@ -143,6 +165,7 @@ function maybe_add_child!(mcts_node::MCTSNode, fcoord)
     new_position = play_move!(mcts_node.position, from_flat(fcoord, mcts_node.position))
     mcts_node.children[fcoord] = MCTSNode(new_position, fcoord, mcts_node)
   end
+
   return mcts_node.children[fcoord]
 end
 
@@ -158,15 +181,15 @@ function add_virtual_loss!(mcts_node::MCTSNode, up_to::MCTSNode)
   # who will be deciding whether to investigate this node again.
   loss = mcts_node.position.to_play
   set_W!(mcts_node, W(mcts_node) + loss)
-  if (mcts_node.parent == nothing || mcts_node == up_to) return  end
+  (mcts_node.parent === nothing || mcts_node == up_to) && return
   add_virtual_loss!(mcts_node.parent, up_to)
 end
 
 function revert_virtual_loss!(mcts_node::MCTSNode, up_to::MCTSNode)
   mcts_node.losses_applied -= 1
   revert = -mcts_node.position.to_play
-	set_W!(mcts_node, W(mcts_node) + revert)
-  if (mcts_node.parent == nothing || mcts_node == up_to) return end
+  set_W!(mcts_node, W(mcts_node) + revert)
+  (mcts_node.parent === nothing || mcts_node == up_to) && return
   revert_virtual_loss!(mcts_node.parent, up_to)
 end
 
@@ -181,23 +204,27 @@ function revert_visits!(mcts_node::MCTSNode, up_to::MCTSNode)
     revert the incremented visit counts.
   =#
   set_N!(mcts_node, N(mcts_node) - 1)
-  if mcts_node.parent == nothing || mcts_node == up_to return end
+  (mcts_node.parent === nothing || mcts_node == up_to) && return
   revert_visits!(mcts_node.parent, up_to)
 end
 
 function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
-  board_size = mcts_node.position.env.N
-  @assert size(move_probs) == (mcts_node.position.env.action_space, )
+  N = board_size(mcts_node.position)
+  action_space_size = length(action_space(mcts_node.position))
+
+  @assert size(move_probs) == (action_space_size, )
   # A finished game should not be going through this code path - should
   # directly call backup_value() on the result of the game.
-  
+
   #TODO: Uncommenting @show passes the test. Why?
   #@show !mcts_node.position.done
   @assert !mcts_node.position.done
+
   if mcts_node.is_expanded
     revert_visits!(mcts_node, up_to)
     return
   end
+
   mcts_node.is_expanded = true
   mcts_node.original_prior .= mcts_node.child_prior .= move_probs
   # initialize child Q as current node's value, to prevent dynamics where
@@ -208,7 +235,7 @@ function incorporate_results!(mcts_node::MCTSNode, move_probs, value, up_to)
   # continuing to explore the most favorable move. This is a waste of search.
   #
   # The value seeded here acts as a prior, and gets averaged into Q calculations
-  mcts_node.child_W .= ones(Float32, mcts_node.position.env.action_space) * value
+  mcts_node.child_W .= ones(Float32, action_space_size) * value
   backup_value!(mcts_node, value, up_to)
 end
 
@@ -228,14 +255,13 @@ end
   	greater than the max depth.
 =#
 is_done(mcts_node::MCTSNode) = mcts_node.position.done ||
-mcts_node.position.n >= mcts_node.mcts_rules.max_game_length
+num_moves(mcts_node.position) ≥ mcts_node.mcts_rules.max_game_length
 
 function inject_noise!(mcts_node::MCTSNode)
-  action_space = mcts_node.position.env.action_space
-  dirch = rand(Dirichlet(mcts_node.mcts_rules.dirichlet_noise_alpha
-                                                * ones(action_space)))
-  mcts_node.child_prior .= mcts_node.child_prior * (1 - dirichlet_noise_weight) .+
-                      dirch .* dirichlet_noise_weight
+  action_space_size = length(action_space(mcts_node.position))
+  dirch = rand(Dirichlet(mcts_node.mcts_rules.α * ones(action_space_size)))
+  mcts_node.child_prior .= mcts_node.child_prior * (1 - DIRICHLET_NOISE_WEIGHT) .+
+                      								dirch .* DIRICHLET_NOISE_WEIGHT
 end
 
 function children_as_π(mcts_node::MCTSNode, squash::Bool = false)
@@ -245,9 +271,8 @@ function children_as_π(mcts_node::MCTSNode, squash::Bool = false)
   hopefully to move away from 3-3s
   =#
   probs = mcts_node.child_N
-  if squash
-    probs = probs .^ 0.98
-  end
+  squash && (probs .= probs .^ 0.98)
+
   return probs ./ sum(probs)
 end
 

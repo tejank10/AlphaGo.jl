@@ -1,14 +1,14 @@
-using AlphaGo
-using AlphaGo: PlayerMove, GoPosition, BLACK, WHITE, to_flat, from_kgs
+using AlphaGo, AlphaGo.Game
+using AlphaGo.Game: PlayerMove, GoPosition, to_flat, from_kgs
 using AlphaGo: MCTSNode, select_leaf, incorporate_results!, maybe_add_child!,
                inject_noise!, child_action_score, N, Q, child_Q, set_N!,
                add_virtual_loss!
 using Random: seed!
 
-include("test_utils.jl")
-
 @testset "MCTS" begin
-  env = GoEnv(9)
+  board_sz = 9
+  planes = 8
+  env = Go(board_sz)
   ALMOST_DONE_BOARD = load_board("""
                                 .XO.XO.OO
                                 X.XXOOOO.
@@ -19,35 +19,35 @@ include("test_utils.jl")
                                 .XXXXOOO.
                                 XXXXXOOOO
                                 XXXXOOOOO
-                                """, env)
+                                """, board_sz)
 
-  TEST_POSITION = Position(env,
+  TEST_POSITION = GoPosition(board_sz, planes;
       board = ALMOST_DONE_BOARD,
       n = 105,
       komi = 2.5,
       caps = (1, 4),
       ko = nothing,
-      recent = [PlayerMove(BLACK, (1, 2)),
-              PlayerMove(WHITE, (1, 9))],
-      to_play = BLACK);
+      recent = [PlayerMove(env.colors["BLACK"], (1, 2)),
+              PlayerMove(env.colors["WHITE"], (1, 9))],
+      to_play = env.colors["BLACK"]);
 
-  SEND_TWO_RETURN_ONE = Position(env,
+  SEND_TWO_RETURN_ONE = GoPosition(board_sz, planes;
       board = ALMOST_DONE_BOARD,
       n = 75,
       komi =  0.5,
       caps = (0, 0),
       ko = nothing,
-      recent = [PlayerMove(BLACK, (1, 2)),
-              PlayerMove(WHITE, (1, 9)),
-              PlayerMove(BLACK, (2, 1))],
-      to_play = WHITE);
+      recent = [PlayerMove(env.colors["BLACK"], (1, 2)),
+              PlayerMove(env.colors["WHITE"], (1, 9)),
+              PlayerMove(env.colors["BLACK"], (2, 1))],
+      to_play = env.colors["WHITE"]);
 
   @testset "action_flipping" begin
     seed!(1)
-    probs = 0.02 * ones(env.N ^ 2 + 1)
-    probs = probs + rand(env.N ^ 2 + 1) * 0.001
-    black_root = MCTSNode(Position(env))
-    white_root = MCTSNode(Position(env,to_play = WHITE))
+    probs = 0.02 * ones(board_sz ^ 2 + 1)
+    probs = probs + rand(board_sz ^ 2 + 1) * 0.001
+    black_root = MCTSNode(GoPosition(board_sz, planes))
+    white_root = MCTSNode(GoPosition(board_sz, planes; to_play = env.colors["WHITE"]))
     incorporate_results!(select_leaf(black_root), probs, 0, black_root)
     incorporate_results!(select_leaf(white_root), probs, 0, white_root)
     # No matter who is to play, when we know nothing else, the priors
@@ -59,18 +59,18 @@ include("test_utils.jl")
   end
 
   @testset "select_leaf" begin
-    flattened = to_flat(from_kgs("D9", env), env)
-    probs = 0.02 * ones(env.N ^ 2 + 1)
+    flattened = to_flat(from_kgs("D9", board_sz), board_sz)
+    probs = 0.02 * ones(board_sz ^ 2 + 1)
     probs[flattened] = 0.4
     root = MCTSNode(SEND_TWO_RETURN_ONE)
     incorporate_results!(select_leaf(root), probs, 0, root)
 
-    @test root.position.to_play == WHITE
+    @test root.position.to_play == env.colors["WHITE"]
     @test select_leaf(root) == root.children[flattened]
   end
 
   @testset "backup_incorporate_results" begin
-    probs = 0.02 * ones(env.N ^ 2 + 1)
+    probs = 0.02 * ones(board_sz ^ 2 + 1)
     root = MCTSNode(SEND_TWO_RETURN_ONE)
     incorporate_results!(select_leaf(root), probs, 0, root)
 
@@ -96,7 +96,7 @@ include("test_utils.jl")
     #       \
     #       leaf2
     # which happens in this test because root is W to play and leaf was a W win.
-    @test root.position.to_play == WHITE
+    @test root.position.to_play == env.colors["WHITE"]
     leaf2 = select_leaf(root)
     incorporate_results!(leaf2, probs, -0.2, root)  # another white semi-win
     @test N(root) == 3
@@ -114,12 +114,12 @@ include("test_utils.jl")
   end
 
   @testset "do_not_explore_past_finish" begin
-    probs = 0.02 * ones(Float32, env.N ^ 2 + 1)
-    root = MCTSNode(Position(env))
+    probs = 0.02 * ones(Float32, board_sz ^ 2 + 1)
+    root = MCTSNode(GoPosition(board_sz, planes))
     incorporate_results!(select_leaf(root), probs, 0, root)
-    first_pass = maybe_add_child!(root, to_flat(nothing, env))
+    first_pass = maybe_add_child!(root, to_flat(nothing, board_sz))
     incorporate_results!(first_pass, probs, 0, root)
-    second_pass = maybe_add_child!(first_pass, to_flat(nothing, env))
+    second_pass = maybe_add_child!(first_pass, to_flat(nothing, board_sz))
     @test_throws AssertionError incorporate_results!(second_pass, probs, 0, root)
     node_to_explore = select_leaf(second_pass)
     # should just stop exploring at the end position.
@@ -127,7 +127,7 @@ include("test_utils.jl")
   end
 
   @testset "add_child" begin
-    root = MCTSNode(Position(env,))
+    root = MCTSNode(GoPosition(board_sz, planes))
     child = maybe_add_child!(root, 17)
     @test 17 ∈ keys(root.children)
     @test child.parent == root
@@ -135,7 +135,7 @@ include("test_utils.jl")
   end
 
   @testset "add_child_idempotency" begin
-    root = MCTSNode(Position(env,))
+    root = MCTSNode(GoPosition(board_sz, planes))
     child = maybe_add_child!(root, 17)
     current_children = copy(root.children)
     child2 = maybe_add_child!(root, 17)
@@ -144,7 +144,7 @@ include("test_utils.jl")
   end
 
   @testset "never_select_illegal_moves" begin
-    probs = 0.02 * ones(env.N ^ 2 + 1)
+    probs = 0.02 * ones(board_sz ^ 2 + 1)
     # let's say the NN were to accidentally put a high weight on an illegal move
     probs[2] = 0.99
     root = MCTSNode(SEND_TWO_RETURN_ONE)
@@ -152,7 +152,7 @@ include("test_utils.jl")
     # and let's say the root were visited a lot of times, which pumps up the
     # action score for unvisited moves...
     set_N!(root, 10000)
-    root.child_N[Bool.(all_legal_moves(root.position))] .= 10000
+    root.child_N[Bool.(legal_moves(root.position))] .= 10000
     # this should not throw an error...
     leaf = select_leaf(root)
     # the returned leaf should not be the illegal move
@@ -167,11 +167,11 @@ include("test_utils.jl")
   end
 
   @testset "dont_pick_unexpanded_child" begin
-    probs = 0.02 * ones(env.N ^ 2 + 1)
+    probs = 0.02 * ones(board_sz ^ 2 + 1)
     # make one move really likely so that tree search goes down that path twice
     # even with a virtual loss
     probs[18] = 0.999
-    root = MCTSNode(Position(env,))
+    root = MCTSNode(GoPosition(board_sz, planes))
     incorporate_results!(root, probs, 0, root)
     leaf1 = select_leaf(root)
     @test leaf1.fmove == 18

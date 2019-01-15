@@ -1,19 +1,21 @@
-function load_board(str, go_env::GoEnv)
+function load_board(str, N)
   reverse_map = Dict{Char, Int}([
       'X' => 1, # BLACK
       'O' => -1,  # WHITE
       '.' => 0, # EMPTY
       '#' => 2, # FILL
-      '*' => 3, # Ko
+      '*' => 3, # KO
       '?' => 4  # UNKNOWN
   ])
   str = replace(str, r"[^XO\.#]+" => s"")
-  @assert length(str) == go_env.N ^ 2 # "Board to load didn't have right dimensions"
-  board = zeros(Int8, go_env.N, go_env.N)
+  @assert length(str) == N ^ 2  # "Board to load didn't have right dimensions"
+  board = zeros(Int8, N, N)
   for (i, char) in enumerate(str)
       board[i] = reverse_map[char]
   end
+
   board = permutedims(board, [2, 1])
+
   return board
 end
 
@@ -28,6 +30,7 @@ function assertEqualLibTracker(lib_tracker1, lib_tracker2)
   # A lib tracker may have differently numbered groups yet still
   # represent the same set of groups.
   # "Sort" the group_ids to ensure they are the same.
+  MISSING_GROUP_ID = -1
   function find_group_mapping(lib_tracker)
     current_gid = 0
     mapping = Dict{Int16, Int}()

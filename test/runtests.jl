@@ -1,4 +1,5 @@
 using Test
+include("test_utils.jl")
 
 @testset "AlphaGo" begin
   include("test_go.jl")

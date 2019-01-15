@@ -1,33 +1,29 @@
 module AlphaGo
-using CuArrays
+#using CuArrays
 using Flux
-using Flux: crossentropy, back!, mse, @treelike
+using Flux: crossentropy, back!, mse, @treelike, loadparams!
 using StatsBase: Weights
-using Printf: @sprintf 
+using Printf: @sprintf
 
-struct IllegalMove <:Exception end
-abstract type Position end
-abstract type GameEnv end
+include("games/Game.jl")
 
-struct PositionWithContext
-  position::Position
-  next_move
-  result::Int
-end
+using .Game
+using .Game: from_flat, to_flat, from_kgs, replay_position
+using .Game: GoPosition
 
-export MCTSPlayer, NeuralNet, pick_move, play_move!,
+get_feats(player) = get_feats(player.root.position)
+
+export MCTSPlayer, pick_move, play_move!,
       initialize_game!, set_result!,
-      should_resign, is_done, result, train!, selfplay,
-      train, play, load_model, GoEnv, GomokuEnv, Position, all_legal_moves,
-      ChessEnv, result
+      Go, num_moves, action_space, max_action_space,
+      result_string, is_done, get_feats
 
-
-include("game/go/go.jl")
-include("game/gomoku/gomoku.jl")
-include("game/env.jl")
+include("const.jl")
 include("mcts.jl")
 include("mcts_play.jl")
+
 include("features.jl")
+include("resnet.jl")
 include("neural_net.jl")
 include("selfplay.jl")
 include("train.jl")
@@ -35,4 +31,3 @@ include("play.jl")
 
 
 end #module
-
