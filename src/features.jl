@@ -21,6 +21,7 @@ function stone_features(pos::T) where T<:GoTypePos
   features .+ 0f0
 end
 
-color_to_play_feature(pos::GoTypePos) = pos.to_play * ones(UInt8, pos.env.N, pos.env.N, 1)
+color_to_play_feature(pos::GoTypePos) = pos.to_play * ones(UInt8, board_size(pos),
+                                                           board_size(pos), 1)
 
 get_feats(pos::GoTypePos) = cat(dims=3, stone_features(pos), color_to_play_feature(pos))
