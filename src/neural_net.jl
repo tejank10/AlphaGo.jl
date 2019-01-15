@@ -57,7 +57,7 @@ function testmode!(nn::NeuralNet, val::Bool=true)
   testmode!(nn.value, val)
 end
 
-function (nn::NeuralNet)(input::Vector{Position}, train::Bool = false)
+function (nn::NeuralNet)(input::Vector{T}, train::Bool = false) where T <: Position
   nn_in = cat(dims=4, get_feats.(input)...) |> gpu
 
   !train && testmode!(nn)
