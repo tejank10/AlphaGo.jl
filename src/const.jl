@@ -15,7 +15,7 @@ DIRICHLET_NOISE_α = 3f-2
 # TRAINING
 
 # Number of moves to consider when creating the batch
-BUFFER_SIZE = 2000
+BUFFER_SIZE = 200000
 # Number of mini-batch before evaluation during training
 BATCH_SIZE = 64
 # Number of residual blocks
