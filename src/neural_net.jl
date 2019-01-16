@@ -17,7 +17,7 @@ function NeuralNet(env::AbstractEnv; blocks = BLOCKS)
   tower = [res_block() for i = 1:BLOCKS]
   action_space_size = length(env.board_data.action_space)
 
-  base_net = Chain(Conv((3, 3), 2num_planes+1 => 256, pad=(1, 1)),
+  base_net = Chain(Conv((3, 3), num_planes => 256, pad=(1, 1)),
                    BatchNorm(256, relu),
                    tower...) |> gpu
 
