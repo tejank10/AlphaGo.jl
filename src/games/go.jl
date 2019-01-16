@@ -643,4 +643,4 @@ function Base.show(io::IO, env::Go)
 end
 
 init_position(pos::GoPosition) = GoPosition(board_size(pos), pos.planes)
-init_position(env::Go) = GoPosition(env.board_data.N, env.board_data.planes)
+init_position(env::Go) = GoPosition(env.board_data.N, env.board_data.planes ÷ 2)
